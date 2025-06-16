@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .utils import calculate_distance
 from copy  import deepcopy
-from .models import TeacherProfile
-from .serializer import TeacherProfileSerializer
+from .models import TeacherProfile, AcademicProfile, Qualification, Availability
+from .serializer import TeacherProfileSerializer, AcademicProfileSerializer, QualificationSerializer, AvailabilitySerializer
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -67,8 +67,8 @@ def create_teacher(request):
     teacher = TeacherProfile.objects.filter(user=request.user)
     if not teacher.exists():
         data = deepcopy(request.data)
+        print(request.user.id)
         data['user'] = request.user.id
-        print(data)
         serializer = TeacherProfileSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -79,8 +79,108 @@ def create_teacher(request):
         
     else:
         return Response({"detail": "Teacher profile already exists."}, status=status.HTTP_400_BAD_REQUEST)
-   
     
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def edit_teacher(request):
+    try:
+        teacher = TeacherProfile.objects.get(user=request.user)
+    except TeacherProfile.DoesNotExist:
+        return Response({"detail": "Teacher profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+    data = deepcopy(request.data)
+    data['user'] = request.user.id 
+    serializer = TeacherProfileSerializer(teacher, data=data, partial=True)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_academic_profile(request):
+    teacher = TeacherProfile.objects.filter(user=request.user)
+    if not teacher.exists():
+        return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_400_BAD_REQUEST)
+    data = deepcopy(request.data)
+    data['teacher'] = teacher.first().id
+    serializer = AcademicProfileSerializer(data=data)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def edit_academic_profile(request):
+    try:
+        academic_profile = AcademicProfile.objects.get(id=request.data.get('id'))
+    except AcademicProfile.DoesNotExist:
+        return Response({"detail": "Academic profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+    data = deepcopy(request.data)
+    data['teacher'] = academic_profile.teacher.id
+    serializer = AcademicProfileSerializer(academic_profile, data=data, partial=True)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_qualification(request):
+    teacher = TeacherProfile.objects.filter(user=request.user)
+    if not teacher.exists():
+        return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_400_BAD_REQUEST)
+    data = deepcopy(request.data)
+    data['teacher'] = teacher.first().id
+    serializer = QualificationSerializer(data=data)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def edit_qualification(request):
+    try:
+        qualification = Qualification.objects.get(id=request.data.get('id'))
+    except AcademicProfile.DoesNotExist:
+        return Response({"detail": "Qualification profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+    data = deepcopy(request.data)
+    data['teacher'] = qualification.teacher.id
+    serializer = QualificationSerializer(qualification, data=data, partial=True)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_teacher_full_profile(request):
+    """
+    Retrieve the TeacherProfile, AcademicProfiles, and Qualifications for the authenticated user.
+    """
+    try:
+        teacher_profile = TeacherProfile.objects.get(user=request.user)
+    except TeacherProfile.DoesNotExist:
+        return Response({"detail": "Teacher profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+    teacher_profile_data = TeacherProfileSerializer(teacher_profile).data
+    academic_profiles = AcademicProfile.objects.filter(teacher=teacher_profile)
+    academic_profiles_data = AcademicProfileSerializer(academic_profiles, many=True).data
+    qualifications = Qualification.objects.filter(teacher=teacher_profile)
+    qualifications_data = QualificationSerializer(qualifications, many=True).data
+
+    return Response({
+        "teacher_profile": teacher_profile_data,
+        "academic_profiles": academic_profiles_data,
+        "qualifications": qualifications_data
+    }, status=status.HTTP_200_OK)
 
 
 

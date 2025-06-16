@@ -48,22 +48,26 @@ class Subject(models.Model):
 
 class AcademicProfile(models.Model):
     teacher = models.ForeignKey('TeacherProfile', on_delete=models.CASCADE, related_name='academic_profile')
-    institution = models.CharField(max_length=255, blank=True)
-    degree = models.CharField(max_length=100, blank=True)
-    graduation_year = models.PositiveIntegerField(null=True, blank=True)
+    institution = models.CharField(max_length=25)
+    degree = models.CharField(max_length=100)
+    graduation_year = models.PositiveIntegerField()
     results = models.TextField(blank=True)
     certificates = models.FileField(upload_to=certificate_upload_to, blank=True, null=True)
+    validated = models.BooleanField(default=False, help_text="Indicates if the academic profile has been validated by an admin.")
 
     def __str__(self):
         return f"{self.teacher.user.username}'s Academic Profile"
     
+
+    
 class Qualification(models.Model):
     teacher = models.ForeignKey('TeacherProfile', on_delete=models.CASCADE, related_name='qualifications')
     organization = models.CharField(max_length=255, blank=True)
-    skill = models.CharField(max_length=100, blank=True)
+    skill = models.CharField(max_length=100)
     year = models.PositiveIntegerField(null=True, blank=True)
     results = models.TextField(blank=True,null=True)
     certificates = models.FileField(upload_to=certificate_upload_to, blank=True, null=True)
+    validated = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username}'s Academic Profile"

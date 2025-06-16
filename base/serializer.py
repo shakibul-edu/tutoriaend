@@ -15,15 +15,24 @@ class TeacherProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherProfile
         fields = '__all__'
+        extra_kwargs = {
+            'verified': {'read_only': True},
+        }
 
 
 class AcademicProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademicProfile
         fields = '__all__'
+        extra_kwargs = {
+            'validated': {'read_only': True},
+        }
 
 
 class QualificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Qualification
         fields = '__all__'
+        extra_kwargs = {
+            'validated': {'read_only': True},
+        }
