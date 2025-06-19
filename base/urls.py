@@ -3,7 +3,7 @@ from .views import (home, protected_view,
 set_location, create_teacher,
 edit_teacher, create_academic_profile,
 edit_academic_profile, create_qualification, edit_qualification,
-get_teacher_full_profile
+get_teacher_full_profile, create_availability_slots,edit_availability_slots
 )
 
 app_name = 'base'
@@ -19,4 +19,6 @@ urlpatterns = [
     path('qualification/create/', create_qualification, name='create_qualification'),
     path('qualification/edit/', edit_qualification, name='edit_qualification'),
     path('teacher/full-profile/', get_teacher_full_profile, name='get_teacher_full_profile'),
+    path('availability/create/', create_availability_slots, name='create_availability_slots'),
+    path('availability/edit/', edit_availability_slots, name='edit_availability_slots'),
 ]

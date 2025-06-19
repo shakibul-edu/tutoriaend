@@ -58,3 +58,26 @@ def find_available_tutors(day_of_week: str, desired_start_time: time, desired_en
     return list(found_tutors)
 
 
+
+def get_availability_grouped_by_time(teacher:TeacherProfile):
+    """
+    Returns the availability slots for the authenticated teacher,
+    grouped by days that share the same time frame.
+    """
+    
+    slots = Availability.objects.filter(tutor=teacher)
+    grouped = {}
+    for slot in slots:
+        # Assuming slot has 'start_time' and 'end_time' fields and 'day' field
+        time_key = f"{slot.start_time}-{slot.end_time}"
+        if time_key not in grouped:
+            grouped[time_key] = {
+                "start_time": slot.start_time,
+                "end_time": slot.end_time,
+                "days": []
+            }
+        grouped[time_key]["days"].append(slot.day_of_week)
+    
+    result = list(grouped.values())
+    return result
+

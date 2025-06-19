@@ -70,7 +70,7 @@ class Qualification(models.Model):
     validated = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.user.username}'s Academic Profile"
+        return f"{self.teacher.user.username}'s Academic Profile"
 
 class TeacherProfile(models.Model):
     user = models.OneToOneField('CustomUser', on_delete=models.CASCADE, related_name='teacher_profile')
