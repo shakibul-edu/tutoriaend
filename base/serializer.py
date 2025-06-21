@@ -1,4 +1,4 @@
-from .models import TeacherProfile, AcademicProfile, Qualification, Availability
+from .models import TeacherProfile, AcademicProfile, Qualification, Availability, Grade, Subject
 from rest_framework import serializers
 
 
@@ -35,4 +35,18 @@ class QualificationSerializer(serializers.ModelSerializer):
         fields = '__all__'
         extra_kwargs = {
             'validated': {'read_only': True},
+        }
+
+class GradeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Grade
+        fields = '__all__'
+
+
+class SubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subject
+        fields = '__all__'
+        extra_kwargs = {
+            'grade': {'required': False, 'allow_null': True},
         }

@@ -65,7 +65,13 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         # 'base.authentication.GoogleIDTokenAuthentication',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '4/minute',
+        'user': '1000/day'
+    }
 }
+
+
 
 from datetime import timedelta
 

@@ -1,0 +1,7 @@
+{
+    "servers": {
+        "github-mcp": {
+            "url": "https://api.githubcopilot.com/mcp/"
+        }
+    }
+}
