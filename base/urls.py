@@ -18,4 +18,5 @@ urlpatterns = [
     path('availability/edit/', views.edit_availability_slots, name='edit_availability_slots'),
     path('grade-by-medium/', views.get_grades_by_medium, name='get_grade_by_medium'),
     path('subject-by-grade/', views.get_subjects_by_grade, name='get_subject_by_grade'),
+    path('filter-teachers/', views.filter_teachers, name='filter_teachers'),
 ]

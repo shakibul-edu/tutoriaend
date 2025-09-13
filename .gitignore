@@ -4,3 +4,12 @@ __pycache__
 db.sqlite3
 venv/
 *.pyc
+**/*.pyc
+*/migrations
+/staticfiles
+*.pem
+*.log
+*/__pycache__
+/__pycache__/
+**/__pycache__
+**/*.pyc

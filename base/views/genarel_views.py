@@ -4,12 +4,14 @@ from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from ..utils import calculate_distance
+from ..utils import calculate_distance, string_to_point
 from copy  import deepcopy
 from ..models import (TeacherProfile,
                       Availability, Medium, Subject, Grade)
 from ..serializer import ( AvailabilitySerializer,GradeSerializer, SubjectSerializer
+                          
                           )
+from django.contrib.gis.geos import Point
 
 
 @api_view(['GET'])
@@ -37,11 +39,15 @@ def set_location(request):
     Expects a JSON body with a 'location' field.
     """
     print("initiated set_location view")
-    location = request.data.get('location')
+    location = string_to_point(request.data.get('location'))
+    
     if not location:
         return Response({"error": "Location is required."}, status=400)
     # Check if user already has a location
     previous_location = getattr(request.user, "location", None)
+
+    print(f"Received location: {location}")
+    print(f"Received location: {previous_location}")
     update_param = request.data.get("update", False)
 
     
@@ -60,6 +66,8 @@ def set_location(request):
         else:
             return Response({"detail": "Location don't need to be updated. The new location is within 200 meters of the previous location."},status=200)
     user = request.user
+    if not location:
+        return Response({"error": "Invalid location format. Use 'lon,lat' format."}, status=400)
     user.location = location
     user.save()
     return Response({"detail": "Location updated successfully."}, status=200)

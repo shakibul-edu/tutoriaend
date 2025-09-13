@@ -2,16 +2,12 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.contrib.gis.db import models as geomodels
  
 
 class CustomUser(AbstractUser):
     is_teacher = models.BooleanField(default=False)
-    location = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="Comma separated values: lat,lon,accuracy (e.g., '23.4567,90.1234,10')"
-    )
+    location = geomodels.PointField(null=True, blank=True,geography=True, help_text="The geographical location of the user.")
     banned = models.BooleanField(default=False, help_text="Indicates if the user is banned from the platform.")
 
 def certificate_upload_to(instance, filename):

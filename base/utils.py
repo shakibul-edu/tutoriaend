@@ -1,19 +1,68 @@
-from math import radians, sin, cos, sqrt, atan2
+# from math import radians, sin, cos, sqrt, atan2
 
 from datetime import time
 from .models import Availability, TeacherProfile # Assuming models.py is in the same app
+from django.contrib.gis.geos import Point
+from geopy.distance import geodesic
+from django.contrib.gis.db.models.functions import Distance as GisDistance  
 
-def calculate_distance(loc1, loc2):
-    lat1, lon1, accu1 = map(float, loc1.split(","))
-    lat2, lon2, accu1 = map(float, loc2.split(","))
-    R = 6371  # Earth radius in km
-    dlat = radians(lat2 - lat1)
-    dlon = radians(lon2 - lon1)
+# def calculate_distance(loc1: Point, loc2: Point) -> float:
+#     """
+#     Calculates the distance in kilometers between two Point objects using the Web Mercator projection.
+
+#     Args:
+#         loc1 (Point): The first location as a Point object.
+#         loc2 (Point): The second location as a Point object.
+
+#     Returns:
+#         float: The distance between the two points in kilometers.
+#     """
+
+#     # distance_obj = GisDistance('some_field', loc2).evaluate(loc1, connection=None)
+#     # return distance_obj.km
+
+#     loc1_3857 = loc1.transform(3857, clone=True)
+#     loc2_3857 = loc2.transform(3857, clone=True)
+#     return loc1_3857.distance(loc2_3857) / 1000  # Convert meters to kilometers
+
+def calculate_distance(loc1: Point, loc2: Point) -> float:
+    """
+    Calculates the distance using geopy's geodesic method between two Point objects.
+    """
+    # Using geopy's geodesic method for accurate distance calculation
+    return geodesic((loc1.y, loc1.x), (loc2.y, loc2.x)).km
+
+
+
     
-    a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+def string_to_point(location: str) -> Point:
+    """
+    Converts a string representation of a location (lon,lat) into a Point object.
     
-    return R * c
+    Args:
+        location (str): A string in the format "lon,lat".
+    
+    Returns:
+        Point: A Point object representing the geographical location.
+    """
+    lat, lon, accu = map(float, location.split(','))
+    print(f"Converting string to point: {lat}, {lon}, {accu}")
+    return Point(lon, lat, srid=4326)  # Using WGS 84 coordinate system
+
+# def calculate_distance(loc1, loc2):
+#     lat1, lon1, accu1 = map(float, loc1.split(","))
+#     lat2, lon2, accu1 = map(float, loc2.split(","))
+#     R = 6371  # Earth radius in km
+#     dlat = radians(lat2 - lat1)
+#     dlon = radians(lon2 - lon1)
+    
+#     a = sin(dlat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2)**2
+#     c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    
+#     return R * c
+
+
 
 
 

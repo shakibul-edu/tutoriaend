@@ -1,0 +1,31 @@
+
+services:
+  backend:
+    build: .
+    container_name: tutoriaend_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: postgis/postgis:17-3.5
+    container_name: tutoriaend_db
+    environment:
+      POSTGRES_DB: mygeo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: sa714010
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+
+volumes:
+  postgres_data:
