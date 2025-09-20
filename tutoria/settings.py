@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     'rest_framework',
     'rest_framework_simplejwt',
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     'base',
 ]
 
@@ -75,12 +77,26 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # 'rest_framework_simplejwt.authentication.JWTAuthentication',
         'base.authentication.GoogleIDTokenAuthentication',
+        # 'base.authentication.GoogleIDTokenAuthenticationExtension',
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '4/minute',
         'user': '1000/day'
-    }
+    },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+SPECTACULAR_SETTINGS = {
+    'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    "TITLE": "Tutoria API",
+    "DESCRIPTION": "API documentation for Tutoria project",
+    "SECURITY_DEFINITIONS": 'base.authentication.GoogleIDTokenAuthenticationExtension',
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,  # don’t expose raw schema at /api/schema/
+}
+
 
 
 

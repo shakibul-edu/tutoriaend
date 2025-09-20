@@ -20,15 +20,10 @@ class Medium(models.Model):
         return self.name
 
 
-class TeachingMode(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-
-    def __str__(self):
-        return self.name
     
 class Grade(models.Model):
     medium = models.ManyToManyField(Medium, blank=True, related_name='subjects')
-    name = models.CharField(max_length=50, unique=True, help_text="The name of the grade (e.g., '10th Grade', '12th Grade')")
+    name = models.CharField(max_length=50, unique=True, help_text="The name of the grade (e.g., '10th', '12th ')")
     sequence = models.PositiveIntegerField(unique=True, help_text="The sequence number of the grade (e.g., 10 for '10th Grade', 12 for '12th Grade')")
 
     def __str__(self):
@@ -78,6 +73,7 @@ class TeacherProfile(models.Model):
         blank=True, # Tutors are not required to have subjects initially
         help_text="The subjects this tutor can teach."
     )
+    min_salary = models.PositiveIntegerField(default=0)
     experience_years = models.PositiveIntegerField(default=0)
     medium = models.ManyToManyField(Medium, blank=True, related_name='teacher_profiles')
     GENDER_CHOICES = [
@@ -85,8 +81,16 @@ class TeacherProfile(models.Model):
         ('female', 'Female'),
         ('any', 'Any'),
     ]
+
+    TEACHING_CHOICES = [
+        ('online', 'Online'),
+        ('in_person', 'In Person'),
+        ('batch_online', 'Batch Online'),
+        ('batch_in_person', 'Batch In Person'),
+        ('both', 'Both'),
+    ]
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
-    teaching_mode = models.ManyToManyField(TeachingMode,blank=True, related_name='teacher_profiles')
+    teaching_mode = models.CharField(max_length=20, choices=TEACHING_CHOICES, blank=True)
     preferred_distance = models.PositiveIntegerField(default=0, help_text="Preferred distance for teaching in kilometers")
 
     def __str__(self):

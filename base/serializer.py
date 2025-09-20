@@ -7,7 +7,11 @@ from rest_framework import serializers
 class AvailabilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Availability
-        fields = '__all__'
+        fields = ['id', 'day_of_week', 'start_time', 'end_time','tutor']
+        extra_kwargs = {
+            'tutor': {'read_only': True},
+            'id': {'read_only': True},
+        }
 
         
 class TeacherProfileSerializer(serializers.ModelSerializer):

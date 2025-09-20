@@ -8,8 +8,11 @@ load_dotenv()
 
 User = get_user_model()
 
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
+
 class GoogleIDTokenAuthentication(BaseAuthentication):
     def authenticate(self, request):
+        
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             return None
@@ -39,3 +42,15 @@ class GoogleIDTokenAuthentication(BaseAuthentication):
             if "Token used too late" in error_message or "expired" in error_message:
                 raise AuthenticationFailed("Token has expired.")
             raise AuthenticationFailed(f"Invalid token: {error_message}")
+
+class GoogleIDTokenAuthenticationExtension(OpenApiAuthenticationExtension):
+    target_class = 'base.authentication.GoogleIDTokenAuthentication'
+    name = 'GoogleIDTokenAuth'
+
+    def get_security_definition(self, auto_schema):
+        return {
+            'type': 'http',
+            'scheme': 'bearer',
+            'bearerFormat': 'JWT',
+            'description': 'Google ID Token authentication using Bearer token in Authorization header.'
+        }

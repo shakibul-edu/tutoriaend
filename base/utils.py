@@ -1,35 +1,14 @@
-# from math import radians, sin, cos, sqrt, atan2
+
 
 from datetime import time
-from .models import Availability, TeacherProfile # Assuming models.py is in the same app
+from .models import Availability, TeacherProfile 
 from django.contrib.gis.geos import Point
 from geopy.distance import geodesic
-from django.contrib.gis.db.models.functions import Distance as GisDistance  
-
-# def calculate_distance(loc1: Point, loc2: Point) -> float:
-#     """
-#     Calculates the distance in kilometers between two Point objects using the Web Mercator projection.
-
-#     Args:
-#         loc1 (Point): The first location as a Point object.
-#         loc2 (Point): The second location as a Point object.
-
-#     Returns:
-#         float: The distance between the two points in kilometers.
-#     """
-
-#     # distance_obj = GisDistance('some_field', loc2).evaluate(loc1, connection=None)
-#     # return distance_obj.km
-
-#     loc1_3857 = loc1.transform(3857, clone=True)
-#     loc2_3857 = loc2.transform(3857, clone=True)
-#     return loc1_3857.distance(loc2_3857) / 1000  # Convert meters to kilometers
 
 def calculate_distance(loc1: Point, loc2: Point) -> float:
     """
     Calculates the distance using geopy's geodesic method between two Point objects.
     """
-    # Using geopy's geodesic method for accurate distance calculation
     return geodesic((loc1.y, loc1.x), (loc2.y, loc2.x)).km
 
 

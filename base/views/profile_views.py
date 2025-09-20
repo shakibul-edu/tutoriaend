@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from copy import deepcopy
@@ -7,16 +7,43 @@ from base.models import TeacherProfile, AcademicProfile, Qualification
 from base.utils import get_availability_grouped_by_time, calculate_distance
 from base.serializer import TeacherProfileSerializer, AcademicProfileSerializer, QualificationSerializer
 from django.contrib.gis.measure import D
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 
 
+@extend_schema(
+    summary="Create Teacher Profile",
+    description="Creates a new TeacherProfile for the authenticated user. Requires authentication.",
+    request=TeacherProfileSerializer,
+    responses={
+        201: OpenApiResponse(response=TeacherProfileSerializer, description="Teacher profile created successfully."),
+        400: OpenApiResponse(description="Bad request or profile already exists."),
+    },
+    examples=[
+        OpenApiExample(
+            "Create Teacher Profile Example",
+            value={
+                "bio": "Experienced math teacher.",
+                "gender": "male",
+                "min_salary": 50000,
+                "experience_years": 5,
+                "teaching_mode": "both",
+                "preferred_distance": 10,
+                "medium": [1, 2],
+                "subject_list": [1, 2, 3],
+                "grades": [1, 2, 3],
+                 # Add other required fields as per your TeacherProfile model
+                            },
+                            request_only=True,
+                        ),
+                    ],
+                )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_teacher(request):
     teacher = TeacherProfile.objects.filter(user=request.user)
     if not teacher.exists():
         data = deepcopy(request.data)
-        print(request.user.id)
         data['user'] = request.user.id
         serializer = TeacherProfileSerializer(data=data)
         if serializer.is_valid(raise_exception=True):
@@ -25,7 +52,6 @@ def create_teacher(request):
             request.user.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
     else:
         return Response({"detail": "Teacher profile already exists."}, status=status.HTTP_400_BAD_REQUEST)
     

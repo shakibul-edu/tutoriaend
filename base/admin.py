@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (CustomUser, AcademicProfile, TeacherProfile, 
-                     Subject, Medium, TeachingMode, Availability,
+                     Subject, Medium, Availability,
                      Qualification,Grade,
                      )
 
@@ -35,7 +35,6 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 admin.site.register(TeacherProfile, TeacherProfileAdmin)
 admin.site.register(Subject)
 admin.site.register(Medium)
-admin.site.register(TeachingMode)
 
 
 

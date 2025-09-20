@@ -7,13 +7,13 @@ from rest_framework import status
 from ..utils import calculate_distance, string_to_point
 from copy  import deepcopy
 from ..models import (TeacherProfile,
-                      Availability, Medium, Subject, Grade)
-from ..serializer import ( AvailabilitySerializer,GradeSerializer, SubjectSerializer
-                          
-                          )
-from django.contrib.gis.geos import Point
+                      Availability)
+from ..serializer import ( AvailabilitySerializer)
+from rest_framework.viewsets import ModelViewSet
+from rest_framework import serializers
+from drf_spectacular.utils import extend_schema
 
-
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def home(request):
@@ -29,6 +29,24 @@ def protected_view(request):
     A protected view that requires authentication.
     """
     return Response({"detail": f"This is a protected view, accessed by {request.user.first_name} {request.user.last_name}!"})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_location(request):
+    print("initiated get_location view")
+    """
+    A protected view to get the user's location.
+    """
+    if hasattr(request.user, "location") and request.user.location:
+        location = request.user.location
+        return Response({"location": {
+            "latitude": location.y,
+            "longitude": location.x,
+            "accuracy": 0  # Accuracy is not stored; set to 0 or handle as needed
+        }}, status=200)
+    else:
+        return Response({"detail": "Location not set."}, status=404)
 
 
 @api_view(['POST'])
@@ -48,9 +66,8 @@ def set_location(request):
 
     print(f"Received location: {location}")
     print(f"Received location: {previous_location}")
-    update_param = request.data.get("update", False)
+    update_param = request.GET.get("update")
 
-    
     if previous_location:
         distance = calculate_distance(previous_location, location)
         print(f"Previous location: {previous_location}, New location: {location}, Distance: {distance} km")
@@ -62,8 +79,8 @@ def set_location(request):
                     "update_required": True
                 },
                 status=200
-            )
-        else:
+            )  
+        elif distance is not None and distance < .2:
             return Response({"detail": "Location don't need to be updated. The new location is within 200 meters of the previous location."},status=200)
     user = request.user
     if not location:
@@ -75,78 +92,100 @@ def set_location(request):
 
 
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_availability_slots(request):
-    """
-    Create multiple availability slots for the authenticated teacher.
-    Expects a list of availability slot data in the request body.
-    """
-    teacher = TeacherProfile.objects.filter(user=request.user).first()
-    if not teacher:
-        return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_400_BAD_REQUEST)
-    data = deepcopy(request.data)
-    slots_data = data if isinstance(data, list) else data.get('slots', [])
-    if not isinstance(slots_data, list) or not slots_data:
-        return Response({"detail": "A list of availability slots is required."}, status=status.HTTP_400_BAD_REQUEST)
+# @extend_schema(
+#     request=AvailabilitySerializer(many=True),
+#     responses={201: AvailabilitySerializer(many=True)},
+#     description="Create multiple availability slots for the authenticated teacher. Expects a list of availability slot data."
+# )
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def create_availability_slots(request):
+#     """
+#     Create multiple availability slots for the authenticated teacher.
+#     Expects a list of availability slot data in the request body.
+#     """
+#     teacher = TeacherProfile.objects.filter(user=request.user).first()
+#     if not teacher:
+#         return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_404_NOT_FOUND)
+#     data = deepcopy(request.data)
+#     slots_data = data if isinstance(data, list) else data.get('slots', [])
+#     if not isinstance(slots_data, list) or not slots_data:
+#         return Response({"detail": "A list of availability slots is required."}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Attach teacher id to each slot
-    for slot in slots_data:
-        slot['tutor'] = teacher.id
-        print(slot)
+#     # Attach teacher id to each slot
+#     for slot in slots_data:
+#         slot['tutor'] = teacher.id
+#         print(slot)
 
-    serializer = AvailabilitySerializer(data=slots_data, many=True)
-    if serializer.is_valid(raise_exception=True):
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     serializer = AvailabilitySerializer(data=slots_data, many=True)
+#     if serializer.is_valid(raise_exception=True):
+#         serializer.save()
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
-@api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def edit_availability_slots(request):
+# @api_view(['PUT', 'PATCH'])
+# @permission_classes([IsAuthenticated])
+# def edit_availability_slots(request):
+#     """
+#     Edit multiple availability slots for the authenticated teacher.
+#     Expects a list of slot updates, each with an 'id' field.
+#     """
+#     teacher = TeacherProfile.objects.filter(user=request.user).first()
+#     if not teacher:
+#         return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_400_BAD_REQUEST)
+#     data = deepcopy(request.data)
+#     slots_data = data if isinstance(data, list) else data.get('slots', [])
+#     if not isinstance(slots_data, list) or not slots_data:
+#         return Response({"detail": "A list of availability slots is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+#     updated_slots = []
+#     errors = []
+#     for slot_data in slots_data:
+#         slot_id = slot_data.get('id')
+#         if not slot_id:
+#             errors.append({"detail": "Slot 'id' is required.", "slot": slot_data})
+#             continue
+#         try:
+#             slot = Availability.objects.get(id=slot_id, tutor=teacher)
+#         except Availability.DoesNotExist:
+#             errors.append({"detail": f"Availability slot with id {slot_id} does not exist.", "slot": slot_data})
+#             continue
+#         slot_data['tutor'] = teacher.id
+#         serializer = AvailabilitySerializer(slot, data=slot_data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             updated_slots.append(serializer.data)
+#         else:
+#             errors.append({"slot": slot_data, "errors": serializer.errors})
+
+#     response_data = {"updated_slots": updated_slots}
+#     if errors:
+#         response_data["errors"] = errors
+#     return Response(response_data, status=status.HTTP_200_OK if updated_slots else status.HTTP_400_BAD_REQUEST)
+
+
+
+class AvailabilityViewSet(ModelViewSet):
     """
-    Edit multiple availability slots for the authenticated teacher.
-    Expects a list of slot updates, each with an 'id' field.
+    A viewset for viewing and editing availability slots for the authenticated teacher.
     """
-    teacher = TeacherProfile.objects.filter(user=request.user).first()
-    if not teacher:
-        return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_400_BAD_REQUEST)
-    data = deepcopy(request.data)
-    slots_data = data if isinstance(data, list) else data.get('slots', [])
-    if not isinstance(slots_data, list) or not slots_data:
-        return Response({"detail": "A list of availability slots is required."}, status=status.HTTP_400_BAD_REQUEST)
+    serializer_class = AvailabilitySerializer
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
-    updated_slots = []
-    errors = []
-    for slot_data in slots_data:
-        slot_id = slot_data.get('id')
-        if not slot_id:
-            errors.append({"detail": "Slot 'id' is required.", "slot": slot_data})
-            continue
-        try:
-            slot = Availability.objects.get(id=slot_id, tutor=teacher)
-        except Availability.DoesNotExist:
-            errors.append({"detail": f"Availability slot with id {slot_id} does not exist.", "slot": slot_data})
-            continue
-        slot_data['tutor'] = teacher.id
-        serializer = AvailabilitySerializer(slot, data=slot_data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            updated_slots.append(serializer.data)
-        else:
-            errors.append({"slot": slot_data, "errors": serializer.errors})
+    def get_queryset(self):
+        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
+        if not teacher:
+            return Availability.objects.none()
+        return Availability.objects.filter(tutor=teacher)
 
-    response_data = {"updated_slots": updated_slots}
-    if errors:
-        response_data["errors"] = errors
-    return Response(response_data, status=status.HTTP_200_OK if updated_slots else status.HTTP_400_BAD_REQUEST)
-
-
-
-
+    def perform_create(self, serializer):
+        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
+        if not teacher:
+            raise serializers.ValidationError("Teacher profile does not exist. Please create a teacher profile first.")
+        serializer.save(tutor=teacher)
 
 
 
