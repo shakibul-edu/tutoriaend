@@ -5,66 +5,40 @@ from rest_framework.response import Response
 from rest_framework import status
 from base.models import TeacherProfile, AcademicProfile, Qualification
 from base.serializer import  AcademicProfileSerializer, QualificationSerializer
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+from base.models import AcademicProfile, TeacherProfile
+from base.serializer import AcademicProfileSerializer
+from rest_framework.parsers import MultiPartParser
 
 
+class AcademicProfileViewSet(viewsets.ModelViewSet):
+    serializer_class = AcademicProfileSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_academic_profile(request):
-    teacher = TeacherProfile.objects.filter(user=request.user)
-    if not teacher.exists():
-        return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_400_BAD_REQUEST)
-    data = deepcopy(request.data)
-    data['teacher'] = teacher.first().id
-    serializer = AcademicProfileSerializer(data=data)
-    if serializer.is_valid(raise_exception=True):
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
+        if teacher:
+            return AcademicProfile.objects.filter(teacher=teacher)
+        return AcademicProfile.objects.none()
 
-@api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def edit_academic_profile(request):
-    try:
-        academic_profile = AcademicProfile.objects.get(id=request.data.get('id'))
-    except AcademicProfile.DoesNotExist:
-        return Response({"detail": "Academic profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
-
-    data = deepcopy(request.data)
-    data['teacher'] = academic_profile.teacher.id
-    serializer = AcademicProfileSerializer(academic_profile, data=data, partial=True)
-    if serializer.is_valid(raise_exception=True):
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
+        serializer.save(teacher=teacher)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def create_qualification(request):
-    teacher = TeacherProfile.objects.filter(user=request.user)
-    if not teacher.exists():
-        return Response({"detail": "Teacher profile does not exist. Please create a teacher profile first."}, status=status.HTTP_400_BAD_REQUEST)
-    data = deepcopy(request.data)
-    data['teacher'] = teacher.first().id
-    serializer = QualificationSerializer(data=data)
-    if serializer.is_valid(raise_exception=True):
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class QualificationViewSet(viewsets.ModelViewSet):
+    serializer_class = QualificationSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
 
-@api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def edit_qualification(request):
-    try:
-        qualification = Qualification.objects.get(id=request.data.get('id'))
-    except AcademicProfile.DoesNotExist:
-        return Response({"detail": "Qualification profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
+    def get_queryset(self):
+        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
+        if teacher:
+            return Qualification.objects.filter(teacher=teacher)
+        return Qualification.objects.none()
 
-    data = deepcopy(request.data)
-    data['teacher'] = qualification.teacher.id
-    serializer = QualificationSerializer(qualification, data=data, partial=True)
-    if serializer.is_valid(raise_exception=True):
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
+        serializer.save(teacher=teacher)

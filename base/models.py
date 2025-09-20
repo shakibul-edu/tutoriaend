@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models as geomodels
+from django.db.models import CheckConstraint, Q
  
 
 class CustomUser(AbstractUser):
@@ -11,7 +12,7 @@ class CustomUser(AbstractUser):
     banned = models.BooleanField(default=False, help_text="Indicates if the user is banned from the platform.")
 
 def certificate_upload_to(instance, filename):
-    return f"certificates/{instance.user.username}/{filename}"
+    return f"certificates/{instance.teacher.user.username}/{instance.degree if type(instance)==AcademicProfile else instance.skill}/{filename}"
 
 class Medium(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -22,7 +23,7 @@ class Medium(models.Model):
 
     
 class Grade(models.Model):
-    medium = models.ManyToManyField(Medium, blank=True, related_name='subjects')
+    medium = models.ManyToManyField(Medium, blank=True, related_name='mediums')
     name = models.CharField(max_length=50, unique=True, help_text="The name of the grade (e.g., '10th', '12th ')")
     sequence = models.PositiveIntegerField(unique=True, help_text="The sequence number of the grade (e.g., 10 for '10th Grade', 12 for '12th Grade')")
 
@@ -49,6 +50,13 @@ class AcademicProfile(models.Model):
     def __str__(self):
         return f"{self.teacher.user.username}'s Academic Profile"
     
+    def delete(self, *args, **kwargs):
+        """
+        Deletes the file from the filesystem before deleting the model instance.
+        """
+        self.certificates.delete(save=False)  # Delete the file first
+        super().delete(*args, **kwargs) 
+    
 
     
 class Qualification(models.Model):
@@ -62,6 +70,13 @@ class Qualification(models.Model):
 
     def __str__(self):
         return f"{self.teacher.user.username}'s Academic Profile"
+    
+    def delete(self, *args, **kwargs):
+        """
+        Deletes the file from the filesystem before deleting the model instance.
+        """
+        self.certificates.delete(save=False)  # Delete the file first
+        super().delete(*args, **kwargs)  
 
 class TeacherProfile(models.Model):
     user = models.OneToOneField('CustomUser', on_delete=models.CASCADE, related_name='teacher_profile')
@@ -125,13 +140,12 @@ class Availability(models.Model):
         related_name='availabilities', # Allows accessing availabilities from a tutor object (e.g., tutor.availabilities.all())
         help_text="The tutor associated with this availability slot."
     )
-    day_of_week = models.CharField(
-        max_length=3,
-        choices=DAY_CHOICES,
-        help_text="The day of the week for this availability slot."
-    )
     start_time = models.TimeField(help_text="The start time of the availability slot.")
     end_time = models.TimeField(help_text="The end time of the availability slot.")
+    days_of_week = models.CharField(max_length=3, choices=DAY_CHOICES, help_text="The day of the week for this availability slot.")
+
+
+
 
     class Meta:
         verbose_name = "Availability Slot"
@@ -139,8 +153,8 @@ class Availability(models.Model):
         # Ensure that a tutor cannot have overlapping time slots on the same day.
         # This unique_together constraint helps prevent simple overlaps,
         # but more complex overlap logic might be needed in clean method or forms.
-        unique_together = ('tutor', 'day_of_week', 'start_time', 'end_time')
-        ordering = ['tutor__user__username', 'day_of_week', 'start_time'] # Order by tutor, then day, then start time.
+        unique_together = ('tutor',  'start_time', 'end_time')
+        ordering = ['tutor__user__username',  'start_time'] # Order by tutor, then day, then start time.
 
     def clean(self):
         """
@@ -153,5 +167,9 @@ class Availability(models.Model):
                     code='invalid_time_range'
                 )
 
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.tutor.user.username} - {self.get_day_of_week_display()} ({self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')})"
+        return f"{self.tutor.user.username} - ({self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')})"

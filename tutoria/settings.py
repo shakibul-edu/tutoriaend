@@ -83,6 +83,11 @@ REST_FRAMEWORK = {
         'anon': '4/minute',
         'user': '1000/day'
     },
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser', # This is critical for file uploads
+    ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -92,6 +97,7 @@ SPECTACULAR_SETTINGS = {
     'REDOC_DIST': 'SIDECAR',
     "TITLE": "Tutoria API",
     "DESCRIPTION": "API documentation for Tutoria project",
+    'COMPONENT_SPLIT_REQUEST': True,
     "SECURITY_DEFINITIONS": 'base.authentication.GoogleIDTokenAuthenticationExtension',
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,  # don’t expose raw schema at /api/schema/
@@ -191,7 +197,8 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

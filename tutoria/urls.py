@@ -24,17 +24,15 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from tutoria import settings
+from django.conf.urls.static import static
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('base.urls')),  # Include the base app's URLs
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include('rest_framework.urls')),  # Include DRF's authentication URLs
-    path('schema/', get_schema_view(
-        title="My API",
-        description="API documentation for my project",
-        version="1.0.0"
-    ), name="openapi-schema"),
 
     # Raw OpenAPI schema
     path("api-docs/schema/", SpectacularAPIView.as_view(), name="schema"),
@@ -46,3 +44,7 @@ urlpatterns = [
     path("api-docs/docs/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     
 ]
+
+# This is the crucial part for serving media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
