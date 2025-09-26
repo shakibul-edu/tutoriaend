@@ -24,40 +24,40 @@ def get_mediums(request):
     parameters=[
         OpenApiParameter(
             name="medium_id",
-            type=int,
+            type={'type': 'array', 'items': {'type': 'integer'}},
             location=OpenApiParameter.QUERY,
             required=True,
-            description="The ID of the medium to filter grades by."
+            description="A list of medium IDs to filter grades by. Example: ?medium_id=1&medium_id=2"
         )
     ],
     responses={
         200: OpenApiResponse(
             response=GradeSerializer(many=True),
-            description="A list of grades for the specified medium",
+            description="A list of grades for the specified mediums",
             examples=[
                 OpenApiExample(
                     'Sample Response',
                     summary='Successful response',
                     description='Example list of grades',
                     value=[
-  {
-    "id": 1,
-    "name": "6th",
-    "sequence": 6,
-    "medium": [
-      1,
-      2
-    ]
-  },
-  {
-    "id": 2,
-    "name": "7th",
-    "sequence": 7,
-    "medium": [
-      2
-    ]
-  }
-],
+                        {
+                            "id": 1,
+                            "name": "6th",
+                            "sequence": 6,
+                            "medium": [
+                                1,
+                                2
+                            ]
+                        },
+                        {
+                            "id": 2,
+                            "name": "7th",
+                            "sequence": 7,
+                            "medium": [
+                                2
+                            ]
+                        }
+                    ],
                 )
             ]
         ),
@@ -86,17 +86,19 @@ def get_mediums(request):
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
 def get_grades_by_medium(request):
     """
-    Retrieve a list of subjects filtered by the given medium ID.
-    Expects 'medium_id' as a GET parameter.
+    Retrieve a list of grades filtered by the given medium IDs.
+    Expects one or more 'medium_id' as GET parameters.
+    Example: ?medium_id=1&medium_id=2
     """
-    medium_id = request.query_params.get('medium_id')
-    if not medium_id:
+    medium_ids = request.query_params.getlist('medium_id')
+    if not medium_ids:
         return Response({"detail": "medium_id parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        medium = Medium.objects.get(id=medium_id)
-    except Medium.DoesNotExist:
+    mediums = Medium.objects.filter(id__in=medium_ids)
+    if not mediums.exists():
         return Response({"detail": "Medium not found."}, status=status.HTTP_404_NOT_FOUND)
-    grades = Grade.objects.filter(medium=medium)
+    grades = Grade.objects.filter(medium__in=mediums).distinct()
+    if not grades.exists():
+        return Response({"detail": "No grades found for the specified medium."}, status=status.HTTP_404_NOT_FOUND)
     data = GradeSerializer(grades, many=True).data
     return Response(data, status=status.HTTP_200_OK)
 

@@ -88,6 +88,12 @@ class TeacherProfile(models.Model):
         blank=True, # Tutors are not required to have subjects initially
         help_text="The subjects this tutor can teach."
     )
+    grade_list = models.ManyToManyField(
+        Grade,
+        related_name='tutors', # Allows accessing tutors from a grade object (e.g., grade.tutors.all())
+        blank=True, # Tutors are not required to have grades initially
+        help_text="The grades this tutor can teach."
+    )
     min_salary = models.PositiveIntegerField(default=0)
     experience_years = models.PositiveIntegerField(default=0)
     medium = models.ManyToManyField(Medium, blank=True, related_name='teacher_profiles')

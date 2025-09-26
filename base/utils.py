@@ -71,7 +71,7 @@ def find_available_tutors(day_of_week: str, desired_start_time: time, desired_en
     #    - The availability slot's start_time must be less than or equal to the desired_start_time.
     #    - The availability slot's end_time must be greater than or equal to the desired_end_time.
     available_slots = Availability.objects.filter(
-        day_of_week=day_of_week,
+        days_of_week=day_of_week,
         start_time__lte=desired_start_time, # Availability starts before or at desired start
         end_time__gte=desired_end_time      # Availability ends after or at desired end
     ).select_related('tutor') # Optimize by pre-fetching related Tutor objects
