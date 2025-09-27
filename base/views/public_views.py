@@ -21,15 +21,19 @@ def get_mediums(request):
 
 
 @extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="medium_id",
-            type={'type': 'array', 'items': {'type': 'integer'}},
-            location=OpenApiParameter.QUERY,
-            required=True,
-            description="A list of medium IDs to filter grades by. Example: ?medium_id=1&medium_id=2"
-        )
-    ],
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "medium_id": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "A list of medium IDs to filter grades by."
+                }
+            },
+            "required": ["medium_id"]
+        }
+    },
     responses={
         200: OpenApiResponse(
             response=GradeSerializer(many=True),
@@ -81,17 +85,17 @@ def get_mediums(request):
         ),
     }
 )
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
 def get_grades_by_medium(request):
     """
     Retrieve a list of grades filtered by the given medium IDs.
-    Expects one or more 'medium_id' as GET parameters.
-    Example: ?medium_id=1&medium_id=2
+    Expects 'medium_id' as a POST field (array of IDs).
+    Example: {"medium_id": [1, 2]}
     """
-    medium_ids = request.query_params.getlist('medium_id')
-    if not medium_ids:
+    medium_ids = request.data.get('medium_id')
+    if not medium_ids or not isinstance(medium_ids, list):
         return Response({"detail": "medium_id parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
     mediums = Medium.objects.filter(id__in=medium_ids)
     if not mediums.exists():
@@ -104,40 +108,44 @@ def get_grades_by_medium(request):
 
 
 @extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="grade_id",
-            type=int,
-            location=OpenApiParameter.QUERY,
-            required=True,
-            description="The ID of the grade to filter subjects by."
-        )
-    ],
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "grade_id": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "A list of grade IDs to filter subjects by."
+                }
+            },
+            "required": ["grade_id"]
+        }
+    },
     responses={
         200: OpenApiResponse(
             response=SubjectSerializer(many=True),
-            description="A list of subjects for the specified grade",
+            description="A list of subjects for the specified grades",
             examples=[
                 OpenApiExample(
                     'Sample Response',
                     summary='Successful response',
                     description='Example list of subjects',
                     value=[
-  {
-    "id": 1,
-    "name": "Mathmatics",
-    "description": "",
-    "subject_code": "MATH-204",
-    "grade": 1
-  },
-  {
-    "id": 2,
-    "name": "Science",
-    "description": "",
-    "subject_code": None,
-    "grade": 1
-  }
-            ]
+                        {
+                            "id": 1,
+                            "name": "Mathmatics",
+                            "description": "",
+                            "subject_code": "MATH-204",
+                            "grade": 1
+                        },
+                        {
+                            "id": 2,
+                            "name": "Science",
+                            "description": "",
+                            "subject_code": None,
+                            "grade": 1
+                        }
+                    ]
                 )
             ]
         ),
@@ -161,21 +169,23 @@ def get_grades_by_medium(request):
         ),
     }
 )
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
 def get_subjects_by_grade(request):
     """
-    Retrieve a list of subjects filtered by the given medium ID.
-    Expects 'medium_id' as a GET parameter.
+    Retrieve a list of subjects filtered by the given grade IDs.
+    Expects 'grade_id' as a POST field (array of IDs).
+    Example: {"grade_id": [1, 2]}
     """
-    grade_id = request.query_params.get('grade_id')
-    if not grade_id:
+    grade_ids = request.data.get('grade_id')
+    if not grade_ids or not isinstance(grade_ids, list):
         return Response({"detail": "grade_id parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        grade = Grade.objects.get(id=grade_id)
-    except Medium.DoesNotExist:
+    grades = Grade.objects.filter(id__in=grade_ids)
+    if not grades.exists():
         return Response({"detail": "Grade not found."}, status=status.HTTP_404_NOT_FOUND)
-    subjects = Subject.objects.filter(grade=grade)
+    subjects = Subject.objects.filter(grade__in=grades).distinct()
+    if not subjects.exists():
+        return Response({"detail": "No subjects found for the specified grade."}, status=status.HTTP_404_NOT_FOUND)
     data = SubjectSerializer(subjects, many=True).data
     return Response(data, status=status.HTTP_200_OK)
