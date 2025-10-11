@@ -78,10 +78,32 @@ class Qualification(models.Model):
         self.certificates.delete(save=False)  # Delete the file first
         super().delete(*args, **kwargs)  
 
+GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('any', 'Any'),
+    ]
+
+TEACHING_CHOICES = [
+    ('online', 'Online'),
+    ('offline', 'Offline'),
+    ('any', 'Any'),
+]
+
+QUALIFICATION_CHOICES = [
+    ('ssc', 'SSC'),
+    ('hsc', 'HSC'),
+    ('degree', 'Degree'),
+    ('honours', 'Honours'),
+    ('master', 'Master'),
+    ('phd', 'PhD')
+]
+
 class TeacherProfile(models.Model):
     user = models.OneToOneField('CustomUser', on_delete=models.CASCADE, related_name='teacher_profile')
     verified = models.BooleanField(default=False, help_text="Indicates if the teacher's profile has been verified by an admin.")
     bio = models.TextField(blank=True, null=True, help_text="A brief biography of the teacher.")
+    highest_qualification = models.CharField(max_length=50, choices=QUALIFICATION_CHOICES, blank=True, help_text="The highest educational qualification of the teacher.")
     subject_list = models.ManyToManyField(
         Subject,
         related_name='tutors', # Allows accessing tutors from a subject object (e.g., subject.tutors.all())
@@ -96,23 +118,12 @@ class TeacherProfile(models.Model):
     )
     min_salary = models.PositiveIntegerField(default=0)
     experience_years = models.PositiveIntegerField(default=0)
-    medium = models.ManyToManyField(Medium, blank=True, related_name='teacher_profiles')
-    GENDER_CHOICES = [
-        ('male', 'Male'),
-        ('female', 'Female'),
-        ('any', 'Any'),
-    ]
-
-    TEACHING_CHOICES = [
-        ('online', 'Online'),
-        ('in_person', 'In Person'),
-        ('batch_online', 'Batch Online'),
-        ('batch_in_person', 'Batch In Person'),
-        ('both', 'Both'),
-    ]
+    medium_list = models.ManyToManyField(Medium, blank=True, related_name='teacher_profiles')
+    
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
     teaching_mode = models.CharField(max_length=20, choices=TEACHING_CHOICES, blank=True)
     preferred_distance = models.PositiveIntegerField(default=0, help_text="Preferred distance for teaching in kilometers")
+
 
     def __str__(self):
         return f"{self.user.username}'s Teacher Profile"
@@ -131,13 +142,13 @@ class Availability(models.Model):
     A tutor can have multiple availability slots on the same day.
     """
     DAY_CHOICES = [
-        ('MON', 'Monday'),
-        ('TUE', 'Tuesday'),
-        ('WED', 'Wednesday'),
-        ('THU', 'Thursday'),
-        ('FRI', 'Friday'),
-        ('SAT', 'Saturday'),
-        ('SUN', 'Sunday'),
+        ('MO', 'Monday'),
+        ('TU', 'Tuesday'),
+        ('WE', 'Wednesday'),
+        ('TH', 'Thursday'),
+        ('FR', 'Friday'),
+        ('SA', 'Saturday'),
+        ('SU', 'Sunday'),
     ]
 
     tutor = models.ForeignKey(
@@ -159,7 +170,7 @@ class Availability(models.Model):
         # Ensure that a tutor cannot have overlapping time slots on the same day.
         # This unique_together constraint helps prevent simple overlaps,
         # but more complex overlap logic might be needed in clean method or forms.
-        unique_together = ('tutor',  'start_time', 'end_time')
+        unique_together = ('tutor',  'start_time', 'end_time', 'days_of_week')
         ordering = ['tutor__user__username',  'start_time'] # Order by tutor, then day, then start time.
 
     def clean(self):
@@ -179,3 +190,75 @@ class Availability(models.Model):
 
     def __str__(self):
         return f"{self.tutor.user.username} - ({self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')})"
+
+
+class JobPost(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    posted_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='job_posts')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    min_salary = models.PositiveIntegerField(default=0, help_text="Minimum expected salary for the job post.")
+    max_salary = models.PositiveIntegerField(default=0, help_text="Maximum expected salary for the job post.")
+    preffered_distance = models.PositiveIntegerField(default=0, help_text="Preferred distance for the job in kilometers.")
+    medium = models.ForeignKey(Medium, on_delete=models.SET_NULL, null=True, blank=True, related_name='job_posts')
+    grade = models.ForeignKey(Grade, on_delete=models.SET_NULL, null=True, blank=True, related_name='job_posts')
+    subject = models.ManyToManyField(Subject, blank=True, related_name='job_posts')
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
+    teaching_mode = models.CharField(max_length=20, choices=TEACHING_CHOICES, blank=True)
+    highest_qualification = models.CharField(max_length=50, choices=QUALIFICATION_CHOICES, blank=True, help_text="The highest educational qualification required for the job.")
+
+    def clean(self):
+        if self.min_salary and self.max_salary and self.min_salary > self.max_salary:
+            raise ValidationError({'max_salary': _('Maximum salary must be greater than or equal to minimum salary.')})
+        if self.grade and self.subject.exists():
+            invalid_subjects = self.subject.exclude(grade=self.grade)
+            if invalid_subjects.exists():
+                raise ValidationError({
+                    'subject': _('All selected subjects must belong to the selected grade.')
+                })
+
+
+    
+class JobPostAvailability(models.Model):
+    DAY_CHOICES = Availability.DAY_CHOICES
+    job_post = models.ForeignKey(
+        'JobPost',
+        on_delete=models.CASCADE,
+        related_name='availabilities',
+        help_text="The job post associated with this availability slot."
+    )
+    start_time = models.TimeField(help_text="The start time of the availability slot.")
+    end_time = models.TimeField(help_text="The end time of the availability slot.")
+    days_of_week = models.CharField(max_length=3, choices=DAY_CHOICES, help_text="The day of the week for this availability slot.")
+
+    class Meta:
+        verbose_name = "Job Post Availability Slot"
+        verbose_name_plural = "Job Post Availability Slots"
+        unique_together = ('job_post', 'start_time', 'end_time', 'days_of_week')
+        ordering = ['job_post__title', 'start_time']
+
+    def clean(self):
+        if self.start_time and self.end_time:
+            if self.start_time >= self.end_time:
+                raise ValidationError(
+                    _('End time must be after start time.'),
+                    code='invalid_time_range'
+                )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.job_post.title} - ({self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')})"
+
+    def __str__(self):
+        return self.title
+    
+class BidJob(models.Model):
+    job = models.ForeignKey(JobPost, on_delete=models.CASCADE, related_name='bids')
+    tutor = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name='bids')
+    proposed_salary = models.PositiveIntegerField(help_text="The salary proposed by the tutor for the   job.")
+    message = models.TextField(blank=True, null=True, help_text="An optional message from the tutor.")
+    created_at = models.DateTimeField(auto_now_add=True)

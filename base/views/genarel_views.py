@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view,permission_classes, throttle_classes
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from base.custom_permission import IsAuthenticatedAndNotBanned
 from rest_framework.response import Response
 from rest_framework import status
 from ..utils import calculate_distance, string_to_point
@@ -23,7 +24,7 @@ def home(request):
     return Response({"message": "Welcome to the Tutoria API!"})
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedAndNotBanned])
 def protected_view(request):
     """
     A protected view that requires authentication.
@@ -32,7 +33,7 @@ def protected_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedAndNotBanned])
 def get_location(request):
     print("initiated get_location view")
     """
@@ -50,7 +51,7 @@ def get_location(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedAndNotBanned])
 def set_location(request):
     """
     A protected view to set the user's location.
@@ -90,14 +91,53 @@ def set_location(request):
     return Response({"detail": "Location updated successfully."}, status=200)
 
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample
 
+@extend_schema(
+    summary="List or create availability slots",
+    description=(
+        "Retrieve or create availability slots for the authenticated teacher. "
+        "POST accepts a list of objects with 'start', 'end', and 'days' fields. "
+        "Each object will be split into multiple instances, one per day."
+    ),
+    responses={200: AvailabilitySerializer(many=True)},
+    request=AvailabilitySerializer(many=True),
+    examples=[
+        OpenApiExample(
+            name="Availability List Example",
+            value=[
+                {
+                    "start": "20:00",
+                    "end": "21:00",
+                    "days": ["MO", "WE", "FR"]
+                },
+                {
+                    "start": "20:00",
+                    "end": "21:00",
+                    "days": ["SA", "SU", "MO"]
+                }
+            ],
+            request_only=True,
+            response_only=False,
+        )
+    ]
+)
 class AvailabilityViewSet(ModelViewSet):
     """
     A viewset for viewing and editing availability slots for the authenticated teacher.
+    Accepts a list of availability objects with 'start', 'end', and 'days' fields.
+    Each instance in the model should have only one day, so this viewset will
+    split each input object into multiple instances, one per day.
     """
     serializer_class = AvailabilitySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndNotBanned]
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+    def get_serializer(self, *args, **kwargs):
+        if isinstance(kwargs.get('data', None), list):
+            kwargs['many'] = True
+        return super().get_serializer(*args, **kwargs)
 
     def get_queryset(self):
         teacher = TeacherProfile.objects.filter(user=self.request.user).first()
@@ -105,13 +145,35 @@ class AvailabilityViewSet(ModelViewSet):
             return Availability.objects.none()
         return Availability.objects.filter(tutor=teacher)
 
-    def perform_create(self, serializer):
-        teacher = get_object_or_404(TeacherProfile, user=self.request.user)
-        if Availability.objects.filter(tutor=teacher, start_time=serializer.validated_data['start_time'], 
-                                       end_time=serializer.validated_data['end_time'], 
-                                       days_of_week=serializer.validated_data['days_of_week']).exists():
-            raise serializers.ValidationError({"detail": "This availability slot already exists."})
-        serializer.save(tutor=teacher)
+    def create(self, request, *args, **kwargs):
+        teacher = get_object_or_404(TeacherProfile, user=request.user)
+        data = request.data
+        if not isinstance(data, list):
+            data = [data]
+        instances = []
+        errors = []
+        for entry in data:
+            if not isinstance(entry, dict):
+                errors.append({'error': 'Each entry must be a dictionary.'})
+                continue
+            start = entry.get('start')
+            end = entry.get('end')
+            days = entry.get('days', [])
+            for day in days:
+                instance_data = {
+                    'start_time': start,
+                    'end_time': end,
+                    'days_of_week': day,
+                }
+                single_serializer = self.get_serializer(data=instance_data)
+                if single_serializer.is_valid():
+                    instances.append(single_serializer.save(tutor=teacher))
+                else:
+                    errors.append(single_serializer.errors)
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(instances, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 
