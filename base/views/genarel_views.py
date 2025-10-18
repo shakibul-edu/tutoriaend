@@ -145,14 +145,19 @@ class AvailabilityViewSet(ModelViewSet):
             return Availability.objects.none()
         return Availability.objects.filter(tutor=teacher)
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request):
         teacher = get_object_or_404(TeacherProfile, user=request.user)
         data = request.data
         if not isinstance(data, list):
             data = [data]
         instances = []
         errors = []
+        
+        # Delete all existing availability entries for this teacher
+        Availability.objects.filter(tutor=teacher).delete()
+        
         for entry in data:
+            print(entry)
             if not isinstance(entry, dict):
                 errors.append({'error': 'Each entry must be a dictionary.'})
                 continue
@@ -174,6 +179,9 @@ class AvailabilityViewSet(ModelViewSet):
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(instances, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+    
 
 
 

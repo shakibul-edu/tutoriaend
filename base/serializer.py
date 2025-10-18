@@ -94,7 +94,7 @@ class TeacherProfileSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         teacher = TeacherProfile.objects.filter(user=self.context['request'].user).exists()
-        if teacher:
+        if teacher and self.instance is None:
             raise serializers.ValidationError({"detail": "A teacher profile already exists for this user."})
         return data
 

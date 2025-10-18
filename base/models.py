@@ -122,7 +122,7 @@ class TeacherProfile(models.Model):
     
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
     teaching_mode = models.CharField(max_length=20, choices=TEACHING_CHOICES, blank=True)
-    preferred_distance = models.PositiveIntegerField(default=0, help_text="Preferred distance for teaching in kilometers")
+    preferred_distance = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Preferred distance for teaching in kilometers")
 
 
     def __str__(self):

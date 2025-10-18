@@ -25,9 +25,16 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return TeacherProfile.objects.filter(user=user)
-    
+
     def perform_create(self, serializer):
-        return super().perform_create(serializer.save(user=self.request.user))
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        if instance.user == self.request.user:
+            serializer.save()
+        else:
+            raise PermissionDenied("You can only update your own profile.")
 
 
 
