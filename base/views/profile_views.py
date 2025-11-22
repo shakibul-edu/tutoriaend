@@ -23,6 +23,9 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedAndNotBanned]
 
     def get_queryset(self):
+        id = self.request.GET.get('id')
+        if id:
+            return TeacherProfile.objects.filter(id=id)
         user = self.request.user
         return TeacherProfile.objects.filter(user=user)
 

@@ -40,7 +40,7 @@ class Subject(models.Model):
 
 class AcademicProfile(models.Model):
     teacher = models.ForeignKey('TeacherProfile', on_delete=models.CASCADE, related_name='academic_profile')
-    institution = models.CharField(max_length=25)
+    institution = models.CharField(max_length=250)
     degree = models.CharField(max_length=100)
     graduation_year = models.PositiveIntegerField()
     results = models.TextField(blank=True)

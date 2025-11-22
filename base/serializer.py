@@ -130,6 +130,7 @@ class AcademicProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("File size cannot exceed 5 MB.")
 
         return value
+    
 
 
 class QualificationSerializer(serializers.ModelSerializer):
