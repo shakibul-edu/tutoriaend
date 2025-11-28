@@ -3,6 +3,7 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import dj_database_url
 
 # GDAL_LIBRARY_PATH = 'C:/OSGeo4W/bin/gdal311.dll'
 # GDAL_DATA='C:/OSGeo4W/apps/gdal/share/gdal'
@@ -137,17 +138,26 @@ WSGI_APPLICATION = 'tutoria.wsgi.application'
 # }
 
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.getenv("POSTGRES_DB", "mygeo"),
-        "USER": os.getenv("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "sa714010"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),  # 👈 use service name, not localhost
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+if os.environ.get('DATABASE_URL'):
+    # Production database setup using Heroku's DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600, 
+            ssl_require=True 
+        )
     }
-}
-
+else:
+    # Fallback for local development (connecting to your local Docker Compose)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis', # GeoDjango Engine
+            'NAME': 'mygeo',
+            'USER': 'postgres',
+            'PASSWORD': 'sa714010',
+            'HOST': 'db', # Matches your local docker-compose db service name
+            'PORT': '5432',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
