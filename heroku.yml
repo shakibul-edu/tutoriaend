@@ -1,0 +1,14 @@
+# heroku.yml
+build:
+  # Tell Heroku to use your existing Dockerfile to build the 'web' process
+  docker:
+    web: Dockerfile
+release:
+  # Any tasks to run before the web process starts (like database migrations)
+  command:
+    - python manage.py migrate
+run:
+  # Define the main process (web) that Heroku will scale
+  web: 
+    # The default command from your Dockerfile will be used, but you can override it here
+    command: gunicorn tutoria.wsgi:application --bind 0.0.0.0:$PORT  --workers 2
