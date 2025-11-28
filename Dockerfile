@@ -27,7 +27,7 @@ RUN pip install whitenoise
 COPY . .
 
 # Run Django app
-CMD ["gunicorn", "tutoria.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "tutoria.wsgi:application", "--workers", "2", "--bind", "0.0.0.0:$PORT"]
 # For development mode: run Django's development server
 # Uncomment the following line to use runserver instead of gunicorn
 # CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
