@@ -69,6 +69,86 @@ def get_teacher_full_profile(request):
     }, status=status.HTTP_200_OK)
 
 
+
+@extend_schema(
+    operation_id="filterTeachers",
+    description="Retrieve a filtered list of teacher profile overviews. Supports filtering by expected salary range, gender, grade id, and optional distance (km) from the requesting user's location (only applied if user has a location).",
+    parameters=[
+        OpenApiParameter(
+            name="min_salary",
+            location="query",
+            required=False,
+            type=int,
+            description="Minimum expected salary."
+        ),
+        OpenApiParameter(
+            name="max_salary",
+            location="query",
+            required=False,
+            type=int,
+            description="Maximum expected salary."
+        ),
+        OpenApiParameter(
+            name="gender",
+            location="query",
+            required=False,
+            type=str,
+            description="Filter by gender (case-insensitive).",
+            examples=[
+                OpenApiExample("Male", value="male"),
+                OpenApiExample("Female", value="female")
+            ]
+        ),
+        OpenApiParameter(
+            name="grade",
+            location="query",
+            required=False,
+            type=int,
+            description="Grade ID to filter teachers qualified for that grade."
+        ),
+        OpenApiParameter(
+            name="distance",
+            location="query",
+            required=False,
+            type=float,
+            description="Maximum distance in kilometers from the requesting user's location."
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            description="List of teacher overview objects.",
+            response={
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "name": {"type": "string"},
+                        "gender": {"type": "string"},
+                        "expected_salary": {"type": ["number", "null"]},
+                        "grades": {"type": "string", "description": "Representation of grades field."},
+                        "profile_picture": {"type": ["string", "null"], "format": "uri"}
+                    }
+                }
+            },
+            examples=[
+                OpenApiExample(
+                    "SampleResponse",
+                    value=[
+                        {
+                            "id": 12,
+                            "name": "Jane Doe",
+                            "gender": "female",
+                            "expected_salary": 50000,
+                            "grades": "Grade 6, Grade 7",
+                            "profile_picture": "https://example.com/media/pic.jpg"
+                        }
+                    ]
+                )
+            ]
+        )
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticatedAndNotBanned])
 def filter_teachers(request):
@@ -78,10 +158,9 @@ def filter_teachers(request):
     """
     queryset = TeacherProfile.objects.all()
 
-    serializers = TeacherProfileSerializer(queryset, many=True)
-    return Response(serializers.data, status=status.HTTP_200_OK)
+    # serializers = TeacherProfileSerializer(queryset, many=True)
+    # return Response(serializers.data, status=status.HTTP_200_OK)
 
-    min_salary = request.GET.get('min_salary')
     max_salary = request.GET.get('max_salary')
     gender = request.GET.get('gender')
     grade = request.GET.get('grade')
@@ -90,10 +169,8 @@ def filter_teachers(request):
         user_location = request.user.location
         queryset = queryset.filter(user__location__distance_lte=(user_location, D(km=float(distance))))
 
-    if min_salary:
-        queryset = queryset.filter(expected_salary__gte=min_salary)
     if max_salary:
-        queryset = queryset.filter(expected_salary__lte=max_salary)
+        queryset = queryset.filter(min_salary__lte=max_salary)
     if gender:
         queryset = queryset.filter(gender__iexact=gender)
     if grade:
@@ -105,9 +182,9 @@ def filter_teachers(request):
             "id": teacher.id,
             "name": teacher.user.get_full_name(),
             "gender": teacher.gender,
-            "expected_salary": teacher.expected_salary,
-            "grades": teacher.grades,
-            "profile_picture": teacher.profile_picture.url if teacher.profile_picture else None,
+            "expected_salary": teacher.min_salary,
+            # "grades": teacher.grade_list,
+            # "profile_picture": teacher.profile_picture.url if teacher.profile_picture else None,
             # Add more overview fields as needed
         }
         for teacher in queryset
