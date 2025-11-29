@@ -21,10 +21,12 @@ WORKDIR /app
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
-RUN pip install whitenoise
 
 # Copy project files
 COPY . .
+
+# Run collectstatic
+RUN python manage.py collectstatic --noinput
 
 # Run Django app
 CMD ["gunicorn", "tutoria.wsgi:application", "--workers", "2", "--bind", "0.0.0.0:$PORT"]
