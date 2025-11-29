@@ -80,8 +80,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'base.authentication.GoogleIDTokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'base.authentication.GoogleIDTokenAuthentication',
         # 'base.authentication.GoogleIDTokenAuthenticationExtension',
     ],
     'DEFAULT_THROTTLE_RATES': {
@@ -103,7 +103,8 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "Tutoria API",
     "DESCRIPTION": "API documentation for Tutoria project",
     'COMPONENT_SPLIT_REQUEST': True,
-    "SECURITY_DEFINITIONS": 'base.authentication.GoogleIDTokenAuthenticationExtension',
+    # "SECURITY_DEFINITIONS": 'base.authentication.GoogleIDTokenAuthenticationExtension',
+    "SECURITY_DEFINITIONS": 'rest_framework_simplejwt.authentication.JWTAuthentication',
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,  # don’t expose raw schema at /api/schema/
 }
