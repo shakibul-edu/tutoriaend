@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (CustomUser, AcademicProfile, TeacherProfile, 
                      Subject, Medium, Availability,
-                     Qualification,Grade,
+                     Qualification,Grade, JobPost, BidJob, JobPostAvailability
                      )
 
 class CustomUserAdmin(UserAdmin):
@@ -35,6 +35,21 @@ class TeacherProfileAdmin(admin.ModelAdmin):
 admin.site.register(TeacherProfile, TeacherProfileAdmin)
 admin.site.register(Subject)
 admin.site.register(Medium)
+
+class JobPostAvailabilityInline(admin.StackedInline):
+    model = JobPostAvailability
+    extra = 0
+
+    
+class BidJobInline(admin.StackedInline):
+    model = BidJob
+    extra = 0
+
+class JobPostAdmin(admin.ModelAdmin):
+    inlines = [JobPostAvailabilityInline, BidJobInline]
+
+admin.site.register(JobPost, JobPostAdmin)
+admin.site.register(BidJob)
 
 
 

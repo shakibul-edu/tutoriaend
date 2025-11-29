@@ -7,15 +7,16 @@ from base.models import TeacherProfile, AcademicProfile, Qualification
 from base.serializer import  AcademicProfileSerializer, QualificationSerializer
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from base.custom_permission import IsAuthenticatedAndNotBanned
 from base.models import AcademicProfile, TeacherProfile
 from base.serializer import AcademicProfileSerializer
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 
 class AcademicProfileViewSet(viewsets.ModelViewSet):
     serializer_class = AcademicProfileSerializer
-    permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser]
+    permission_classes = [IsAuthenticatedAndNotBanned]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         teacher = TeacherProfile.objects.filter(user=self.request.user).first()
@@ -30,7 +31,7 @@ class AcademicProfileViewSet(viewsets.ModelViewSet):
 
 class QualificationViewSet(viewsets.ModelViewSet):
     serializer_class = QualificationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndNotBanned]
     parser_classes = [MultiPartParser]
 
     def get_queryset(self):
