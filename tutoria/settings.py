@@ -1,9 +1,8 @@
-
-
 from pathlib import Path
 from dotenv import load_dotenv
 import os
 import dj_database_url
+from datetime import timedelta
 
 # GDAL_LIBRARY_PATH = 'C:/OSGeo4W/bin/gdal311.dll'
 # GDAL_DATA='C:/OSGeo4W/apps/gdal/share/gdal'
@@ -31,6 +30,10 @@ CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.herokua
 
 # Security Settings for Production
 if not DEBUG:
+    # CRITICAL FIX: This tells Django to trust Heroku's SSL termination
+    # preventing the infinite redirect loop.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
     SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True') == 'True'
     CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True') == 'True'
@@ -106,10 +109,6 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-
-
-from datetime import timedelta
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
@@ -140,14 +139,6 @@ WSGI_APPLICATION = 'tutoria.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-
 
 if os.environ.get('DATABASE_URL'):
     # Production database setup using Heroku's DATABASE_URL
