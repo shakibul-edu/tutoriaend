@@ -3,7 +3,6 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models as geomodels
-from django.db.models import CheckConstraint, Q
  
 
 class CustomUser(AbstractUser):
@@ -13,6 +12,11 @@ class CustomUser(AbstractUser):
 
 def certificate_upload_to(instance, filename):
     return f"certificates/{instance.teacher.user.username}/{instance.degree if type(instance)==AcademicProfile else instance.skill}/{filename}"
+
+
+def profile_picture_upload_to(instance, filename):
+    return f"profile_pictures/{instance.user.username}/{filename}"
+
 
 class Medium(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -123,6 +127,7 @@ class TeacherProfile(models.Model):
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
     teaching_mode = models.CharField(max_length=20, choices=TEACHING_CHOICES, blank=True)
     preferred_distance = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Preferred distance for teaching in kilometers")
+    profile_picture = models.ImageField(upload_to=profile_picture_upload_to, blank=True, null=True, help_text="Profile picture of the teacher.")
 
 
     def __str__(self):

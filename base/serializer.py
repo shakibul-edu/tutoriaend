@@ -100,6 +100,7 @@ class TeacherProfileSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: TeacherProfile):
         representation = super().to_representation(instance)
+        representation['name'] = instance.user.get_full_name() if instance.user else ""
         representation['grade_list'] = [{"id": grade.id, "name": grade.name} for grade in instance.grade_list.all()]
         representation['subject_list'] = [{"id": subject.id, "name": subject.name} for subject in instance.subject_list.all()]
         representation['medium_list'] = [{"id": medium.id, "name": medium.name} for medium in instance.medium_list.all()]

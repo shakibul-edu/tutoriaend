@@ -10,8 +10,8 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExampl
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from base.custom_permission import IsAuthenticatedAndNotBanned
-from base.models import TeacherProfile
-from base.serializer import TeacherProfileSerializer
+from base.models import TeacherProfile, Availability
+from base.serializer import TeacherProfileSerializer, AvailabilitySerializer
 
 
 
@@ -43,15 +43,35 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
 
 
 
-
+@extend_schema(
+    operation_id="getTeacherFullProfile",
+    description="Retrieve a teacher's full profile (teacher profile, academic profiles, qualifications and scheduled availability).",
+    parameters=[
+        OpenApiParameter(name="pk", location=OpenApiParameter.PATH, required=True, type=int, description="TeacherProfile ID")
+    ],
+    responses={
+        200: OpenApiResponse(
+            response={
+                "type": "object",
+                "properties": {
+                    "teacher_profile": {"$ref": "#/components/schemas/TeacherProfile"},
+                    "academic_profiles": {"type": "array", "items": {"$ref": "#/components/schemas/AcademicProfile"}},
+                    "qualifications": {"type": "array", "items": {"$ref": "#/components/schemas/Qualification"}},
+                    "scheduled_availability": {"type": "array", "items": {"$ref": "#/components/schemas/Availability"}}
+                }
+            }
+        ),
+        404: OpenApiResponse(description="Teacher profile not found.")
+    }
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticatedAndNotBanned])
-def get_teacher_full_profile(request):
+def get_teacher_full_profile(request, pk):
     """
     Retrieve the TeacherProfile, AcademicProfiles, and Qualifications for the authenticated user.
     """
     try:
-        teacher_profile = TeacherProfile.objects.get(user=request.user)
+        teacher_profile = TeacherProfile.objects.get(pk=pk)
     except TeacherProfile.DoesNotExist:
         return Response({"detail": "Teacher profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -60,12 +80,14 @@ def get_teacher_full_profile(request):
     academic_profiles_data = AcademicProfileSerializer(academic_profiles, many=True).data
     qualifications = Qualification.objects.filter(teacher=teacher_profile)
     qualifications_data = QualificationSerializer(qualifications, many=True).data
+    availability = Availability.objects.filter(tutor=teacher_profile)
+    availability_data = AvailabilitySerializer(availability, many=True).data
 
     return Response({
         "teacher_profile": teacher_profile_data,
         "academic_profiles": academic_profiles_data,
         "qualifications": qualifications_data,
-        "scheduled_availability": get_availability_grouped_by_time(teacher_profile)
+        "scheduled_availability": availability_data
     }, status=status.HTTP_200_OK)
 
 
@@ -171,7 +193,7 @@ def filter_teachers(request):
 
     if max_salary:
         queryset = queryset.filter(min_salary__lte=max_salary)
-    if gender:
+    if gender and gender == ('male' or 'female'):
         queryset = queryset.filter(gender__iexact=gender)
     if grade:
         queryset = queryset.filter(grades__id=grade)
@@ -182,10 +204,14 @@ def filter_teachers(request):
             "id": teacher.id,
             "name": teacher.user.get_full_name(),
             "gender": teacher.gender,
+            "verified": teacher.verified,
+            "highest_qualification": teacher.highest_qualification,
+            "medium_list": ", ".join([medium.name for medium in teacher.medium_list.all()]),
+            "teaching_mode": teacher.teaching_mode,
+            "distance": calculate_distance(request.user.location, teacher.user.location),
             "expected_salary": teacher.min_salary,
-            # "grades": teacher.grade_list,
-            # "profile_picture": teacher.profile_picture.url if teacher.profile_picture else None,
-            # Add more overview fields as needed
+            "maximum_grade": max((grade for grade in teacher.grade_list.all()), key=lambda g: g.sequence, default=None).name if teacher.grade_list.all() else None,
+            "profile_picture": teacher.profile_picture.url if teacher.profile_picture else None,
         }
         for teacher in queryset
     ]

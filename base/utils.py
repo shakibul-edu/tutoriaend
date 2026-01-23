@@ -1,5 +1,4 @@
 
-
 from datetime import time
 from .models import Availability, TeacherProfile 
 from django.contrib.gis.geos import Point
@@ -9,7 +8,7 @@ def calculate_distance(loc1: Point, loc2: Point) -> float:
     """
     Calculates the distance using geopy's geodesic method between two Point objects.
     """
-    return geodesic((loc1.y, loc1.x), (loc2.y, loc2.x)).km
+    return round(geodesic((loc1.y, loc1.x), (loc2.y, loc2.x)).km,2)
 
 
 

@@ -23,13 +23,15 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)xtl6)!05!_i&j^xw%8j&
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS',
-    '.herokuapp.com,tutoriaend.shakibul.me,www.tutoriaend.shakibul.me'
+    '.herokuapp.com,tutoriaend.shakibul.me,www.tutoriaend.shakibul.me,localhost,127.0.0.1'
 ).split(',')
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.herokuapp.com,https://tutoriaend.shakibul.me').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://*.herokuapp.com,https://tutoriaend.shakibul.me,http://localhost,http://127.0.0.1'
+).split(',')
 
 # Security Settings for Production
 if not DEBUG:

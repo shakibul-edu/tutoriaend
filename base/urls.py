@@ -25,7 +25,7 @@ urlpatterns = [
     path('mediums/', views.get_mediums, name='get_mediums'),
     path('grade-by-medium/', views.get_grades_by_medium, name='get_grade_by_medium'),
     path('subject-by-grade/', views.get_subjects_by_grade, name='get_subject_by_grade'),
-    path('teacher/full-profile/', views.get_teacher_full_profile, name='get_teacher_full_profile'),
+    path('teacher/full-profile/<int:pk>/', views.get_teacher_full_profile, name='get_teacher_full_profile'),
     path('filter-teachers/', views.filter_teachers, name='filter_teachers'),
 ]
 urlpatterns += router.urls
