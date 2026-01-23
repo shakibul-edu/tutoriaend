@@ -85,8 +85,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        # 'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'base.authentication.GoogleIDTokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'base.authentication.GoogleIDTokenAuthentication',
         # 'base.authentication.GoogleIDTokenAuthenticationExtension',
     ],
     'DEFAULT_THROTTLE_RATES': {

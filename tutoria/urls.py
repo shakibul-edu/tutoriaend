@@ -24,11 +24,13 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from base.authentication import GoogleLoginView
 from tutoria import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("auth/google/", GoogleLoginView.as_view()),
     path('', include('base.urls')),  # Include the base app's URLs
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
