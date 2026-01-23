@@ -193,7 +193,7 @@ def filter_teachers(request):
 
     if max_salary:
         queryset = queryset.filter(min_salary__lte=max_salary)
-    if gender and gender == ('male' or 'female'):
+    if gender and gender in ['male', 'female']:
         queryset = queryset.filter(gender__iexact=gender)
     if grade:
         queryset = queryset.filter(grades__id=grade)
