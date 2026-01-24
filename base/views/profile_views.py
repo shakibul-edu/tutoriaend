@@ -73,9 +73,9 @@ def get_teacher_full_profile(request, pk):
     try:
         teacher_profile = TeacherProfile.objects.get(pk=pk)
         teacher_profile_data = TeacherProfileSerializer(teacher_profile).data
-        contact_request = ContactRequest.objects.filter(student=request.user, teacher=teacher_profile).exists()
+        contact_request = ContactRequest.objects.filter(student=request.user, teacher=teacher_profile)
 
-        if contact_request and contact_request.status in ['accepted', 'contacted']:
+        if contact_request.exists() and contact_request[0].status in ['accepted', 'contacted']:
             pass
         else:
             teacher_profile_data['phone'] = None

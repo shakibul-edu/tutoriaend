@@ -286,9 +286,19 @@ class ContactRequest(models.Model):
     student_name = models.CharField(max_length=100)
     student_phone = models.CharField(max_length=20)
     message = models.TextField(blank=True)
+    fee_budget = models.PositiveIntegerField(default=0, help_text="Approximate budget for tuition")
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
 
     email_opened_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class UserDashboard(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='request_manager')
+    total_requests_sent = models.PositiveIntegerField(default=0)
+    total_requests_received = models.PositiveIntegerField(default=0)
+    total_pending_requests = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"Request Manager for {self.user.username}"
