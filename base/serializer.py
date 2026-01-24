@@ -1,5 +1,6 @@
 from .models import (TeacherProfile, AcademicProfile, Qualification,
-     Availability, Grade, Subject, JobPost, BidJob, JobPostAvailability)
+     Availability, Grade, Subject, JobPost, BidJob, JobPostAvailability
+     , ContactRequest)
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
@@ -228,3 +229,24 @@ class JobPostAvailabilitySerializer(serializers.ModelSerializer):
                 {"end_time": "End time must be after the start time."}
             )
         return data
+    
+class ContactRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactRequest
+        fields = '__all__'
+        extra_kwargs = {
+            'id': {'read_only': True},
+            'created_at': {'read_only': True},
+            'updated_at': {'read_only': True},
+            'student': {'read_only': True},
+        }
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.status == 'accepted':
+            try:
+                teacher_profile = instance.teacher
+                representation['teacher_phone'] = teacher_profile.phone if hasattr(teacher_profile, 'phone') else None
+            except TeacherProfile.DoesNotExist:
+                representation['teacher_phone'] = None
+        return representation

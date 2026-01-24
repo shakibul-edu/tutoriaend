@@ -107,6 +107,7 @@ class TeacherProfile(models.Model):
     user = models.OneToOneField('CustomUser', on_delete=models.CASCADE, related_name='teacher_profile')
     verified = models.BooleanField(default=False, help_text="Indicates if the teacher's profile has been verified by an admin.")
     bio = models.TextField(blank=True, null=True, help_text="A brief biography of the teacher.")
+    phone = models.CharField(max_length=20, blank=True, null=True, help_text="Contact phone number of the teacher.")
     highest_qualification = models.CharField(max_length=50, choices=QUALIFICATION_CHOICES, blank=True, help_text="The highest educational qualification of the teacher.")
     subject_list = models.ManyToManyField(
         Subject,
@@ -267,3 +268,27 @@ class BidJob(models.Model):
     proposed_salary = models.PositiveIntegerField(help_text="The salary proposed by the tutor for the   job.")
     message = models.TextField(blank=True, null=True, help_text="An optional message from the tutor.")
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ContactRequest(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("seen", "Seen"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+        ("contacted", "Contacted"),
+        ("closed", "Closed"),
+    ]
+
+    student = models.ForeignKey(CustomUser, related_name="sent_requests", on_delete=models.CASCADE)
+    teacher = models.ForeignKey(TeacherProfile, related_name="received_requests", on_delete=models.CASCADE)
+
+    student_name = models.CharField(max_length=100)
+    student_phone = models.CharField(max_length=20)
+    message = models.TextField(blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+
+    email_opened_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

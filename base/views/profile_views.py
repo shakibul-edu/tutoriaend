@@ -10,7 +10,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExampl
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from base.custom_permission import IsAuthenticatedAndNotBanned
-from base.models import TeacherProfile, Availability
+from base.models import TeacherProfile, Availability, ContactRequest
 from base.serializer import TeacherProfileSerializer, AvailabilitySerializer
 
 
@@ -72,10 +72,16 @@ def get_teacher_full_profile(request, pk):
     """
     try:
         teacher_profile = TeacherProfile.objects.get(pk=pk)
+        teacher_profile_data = TeacherProfileSerializer(teacher_profile).data
+        contact_request = ContactRequest.objects.filter(student=request.user, teacher=teacher_profile).exists()
+
+        if contact_request and contact_request.status in ['accepted', 'contacted']:
+            pass
+        else:
+            teacher_profile_data['phone'] = None
     except TeacherProfile.DoesNotExist:
         return Response({"detail": "Teacher profile does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-    teacher_profile_data = TeacherProfileSerializer(teacher_profile).data
     academic_profiles = AcademicProfile.objects.filter(teacher=teacher_profile)
     academic_profiles_data = AcademicProfileSerializer(academic_profiles, many=True).data
     qualifications = Qualification.objects.filter(teacher=teacher_profile)

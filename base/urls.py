@@ -13,6 +13,7 @@ router.register(r'qualification', views.QualificationViewSet, basename='qualific
 router.register(r'job-post', views.JobPostViewSet, basename='job_post')
 router.register(r'bid-job', views.BidJobViewSet, basename='bid_job')
 router.register(r'job-post-availability', views.JobPostAvailabilityViewSet, basename='job_post_availability')
+router.register(r'contact-request', views.ContactRequestViewSet, basename='contact_request')
 
 
 
