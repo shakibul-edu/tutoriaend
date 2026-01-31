@@ -184,7 +184,8 @@ def filter_teachers(request):
     Retrieve a filtered list of TeacherProfile overviews.
     Filters: min_salary, max_salary, gender, grade, distance (optional).
     """
-    queryset = TeacherProfile.objects.all()
+    # Use select_related and prefetch_related to optimize queries and avoid missing relations
+    queryset = TeacherProfile.objects.select_related('user').prefetch_related('grade_list', 'medium_list').all()
 
     # serializers = TeacherProfileSerializer(queryset, many=True)
     # return Response(serializers.data, status=status.HTTP_200_OK)
@@ -217,33 +218,66 @@ def filter_teachers(request):
 
     # Only return overview fields
     data = []
+    import logging
+    logger = logging.getLogger(__name__)
+    
     for teacher in queryset:
-        # Safely calculate distance only if both locations exist and are not None
-        distance_value = None
         try:
-            if (hasattr(request.user, 'location') and request.user.location is not None and 
-                hasattr(teacher.user, 'location') and teacher.user.location is not None):
-                distance_value = calculate_distance(request.user.location, teacher.user.location)
+            # Skip teachers without a valid user
+            if not hasattr(teacher, 'user') or teacher.user is None:
+                logger.warning(f"Teacher {teacher.id} has no user associated")
+                continue
+            
+            # Safely calculate distance only if both locations exist and are not None
+            distance_value = None
+            try:
+                if (hasattr(request.user, 'location') and request.user.location is not None and 
+                    hasattr(teacher.user, 'location') and teacher.user.location is not None):
+                    distance_value = calculate_distance(request.user.location, teacher.user.location)
+            except Exception as e:
+                logger.warning(f"Distance calculation failed for teacher {teacher.id}: {e}")
+            
+            # Safely get grade list
+            try:
+                grade_list = teacher.grade_list.all()
+                maximum_grade = max((grade for grade in grade_list), key=lambda g: g.sequence, default=None).name if grade_list else None
+            except Exception as e:
+                logger.warning(f"Grade list access failed for teacher {teacher.id}: {e}")
+                maximum_grade = None
+            
+            # Safely get medium list
+            try:
+                medium_list_str = ", ".join([medium.name for medium in teacher.medium_list.all()])
+            except Exception as e:
+                logger.warning(f"Medium list access failed for teacher {teacher.id}: {e}")
+                medium_list_str = ""
+            
+            # Safely get review data
+            try:
+                reviews_average, reviews_count = get_average_review(teacher)
+            except Exception as e:
+                logger.warning(f"Review calculation failed for teacher {teacher.id}: {e}")
+                reviews_average, reviews_count = None, 0
+            
+            data.append({
+                "id": teacher.id,
+                "name": teacher.user.get_full_name() if teacher.user else "Unknown",
+                "gender": getattr(teacher, 'gender', None),
+                "verified": getattr(teacher, 'verified', False),
+                "highest_qualification": getattr(teacher, 'highest_qualification', None),
+                "medium_list": medium_list_str,
+                "teaching_mode": getattr(teacher, 'teaching_mode', None),
+                "reviews_average": reviews_average,
+                "reviews_count": reviews_count,
+                "distance": distance_value,
+                "expected_salary": getattr(teacher, 'min_salary', None),
+                "maximum_grade": maximum_grade,
+                "profile_picture": teacher.profile_picture.url if hasattr(teacher, 'profile_picture') and teacher.profile_picture else None,
+            })
         except Exception as e:
-            # Log but don't fail
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Distance calculation failed for teacher {teacher.id}: {e}")
-        
-        data.append({
-            "id": teacher.id,
-            "name": teacher.user.get_full_name(),
-            "gender": teacher.gender,
-            "verified": teacher.verified,
-            "highest_qualification": teacher.highest_qualification,
-            "medium_list": ", ".join([medium.name for medium in teacher.medium_list.all()]),
-            "teaching_mode": teacher.teaching_mode,
-            "reviews_average": get_average_review(teacher)[0],
-            "reviews_count": get_average_review(teacher)[1],
-            "distance": distance_value,
-            "expected_salary": teacher.min_salary,
-            "maximum_grade": max((grade for grade in teacher.grade_list.all()), key=lambda g: g.sequence, default=None).name if teacher.grade_list.all() else None,
-            "profile_picture": teacher.profile_picture.url if teacher.profile_picture else None,
-        })
+            # Log the full error and skip this teacher
+            logger.error(f"Failed to process teacher {teacher.id}: {str(e)}", exc_info=True)
+            continue
+    
     return Response(data, status=status.HTTP_200_OK)
 
