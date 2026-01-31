@@ -15,12 +15,12 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS',
-    '.herokuapp.com,tutoriaend.shakibul.me,www.tutoriaend.shakibul.me,localhost,127.0.0.1,etuition.app,www.etuition.app,tuitions.shakibul.me,www.tuitions.shakibul.me'
+    '.herokuapp.com,tutoriaend.shakibul.me,www.tutoriaend.shakibul.me,localhost,127.0.0.1,etuition.app,www.etuition.app,tuitions.shakibul.me,www.tuitions.shakibul.me, api.etuition.app,www.api.etuition.app'
 ).replace(' ', '').split(',')
 
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    'https://*.herokuapp.com,https://tutoriaend.shakibul.me,http://localhost,http://127.0.0.1,https://etuition.app,https://www.etuition.app,https://www.tuitions.shakibul.me'
+    'https://*.herokuapp.com,https://tutoriaend.shakibul.me,http://localhost,http://127.0.0.1,https://etuition.app,https://api.etuition.app,https://www.etuition.app,https://www.tuitions.shakibul.me'
 ).replace(' ', '').split(',')
 
 if not DEBUG:
@@ -94,6 +94,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://tuitions.shakibul.me",
     "https://www.tuitions.shakibul.me",
     "https://etuition.app",
+    "https://api.etuition.app",
     "https://www.etuition.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
