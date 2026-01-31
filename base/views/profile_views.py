@@ -3,14 +3,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from base.models import TeacherProfile, AcademicProfile, Qualification
-from base.utils import get_availability_grouped_by_time, calculate_distance
+from base.utils import get_availability_grouped_by_time, calculate_distance, get_average_review
 from base.serializer import TeacherProfileSerializer, AcademicProfileSerializer, QualificationSerializer
 from django.contrib.gis.measure import D
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from base.custom_permission import IsAuthenticatedAndNotBanned
-from base.models import TeacherProfile, Availability, ContactRequest
+from base.models import TeacherProfile, Availability, ContactRequest,TeacherReview
 from base.serializer import TeacherProfileSerializer, AvailabilitySerializer
 
 
@@ -189,10 +189,11 @@ def filter_teachers(request):
     # serializers = TeacherProfileSerializer(queryset, many=True)
     # return Response(serializers.data, status=status.HTTP_200_OK)
 
-    max_salary = request.GET.get('max_salary')
+    max_salary = request.GET.get('feeRange')
     gender = request.GET.get('gender')
     grade = request.GET.get('grade')
     distance = request.GET.get('distance')
+    tuition_type = request.GET.get('tuitionType')
     if distance and hasattr(request.user, 'location'):
         user_location = request.user.location
         queryset = queryset.filter(user__location__distance_lte=(user_location, D(km=float(distance))))
@@ -203,6 +204,8 @@ def filter_teachers(request):
         queryset = queryset.filter(gender__iexact=gender)
     if grade:
         queryset = queryset.filter(grades__id=grade)
+    if tuition_type and tuition_type in ['online', 'offline']:
+        queryset = queryset.filter(teaching_mode__iexact=tuition_type)
 
     # Only return overview fields
     data = [
@@ -214,7 +217,9 @@ def filter_teachers(request):
             "highest_qualification": teacher.highest_qualification,
             "medium_list": ", ".join([medium.name for medium in teacher.medium_list.all()]),
             "teaching_mode": teacher.teaching_mode,
-            "distance": calculate_distance(request.user.location, teacher.user.location),
+            "reviews_average": get_average_review(teacher)[0],
+            "reviews_count": get_average_review(teacher)[1],
+            "distance": calculate_distance(request.user.location, teacher.user.location) if hasattr(request.user, 'location') and hasattr(teacher.user, 'location') else None,
             "expected_salary": teacher.min_salary,
             "maximum_grade": max((grade for grade in teacher.grade_list.all()), key=lambda g: g.sequence, default=None).name if teacher.grade_list.all() else None,
             "profile_picture": teacher.profile_picture.url if teacher.profile_picture else None,

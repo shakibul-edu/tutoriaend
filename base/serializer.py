@@ -1,6 +1,6 @@
 from .models import (TeacherProfile, AcademicProfile, Qualification,
      Availability, Grade, Subject, JobPost, BidJob, JobPostAvailability
-     , ContactRequest)
+     , ContactRequest, TeacherReview)
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
@@ -282,3 +282,23 @@ class ContactRequestSerializer(serializers.ModelSerializer):
             representation['teacher_phone'] = teacher_phone
 
         return representation
+
+
+class TeacherReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeacherReview
+        fields = '__all__'
+        extra_kwargs = {
+            'id': {'read_only': True}
+        }
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        contact_obj = getattr(instance, 'contact_request', None)
+        representation['student_name'] = (
+            contact_obj.student.get_full_name() if contact_obj and contact_obj.student else ""
+        )
+        representation['tutor_id'] = (
+            contact_obj.teacher.id if contact_obj and contact_obj.teacher else ""
+        )
+        return representation
+   

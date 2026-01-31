@@ -302,3 +302,15 @@ class UserDashboard(models.Model):
 
     def __str__(self):
         return f"Request Manager for {self.user.username}"
+
+
+class TeacherReview(models.Model):
+    contact_request = models.OneToOneField(ContactRequest, on_delete=models.CASCADE, related_name='teacher_review', help_text="The contact request associated with this review.")
+    rating = models.PositiveIntegerField(help_text="Rating given by the student (1-5).")
+    comment = models.TextField(blank=True, null=True, help_text="Optional comment about the teacher.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+   
+
+    def __str__(self):
+        return f"Review of {self.teacher.user.username} by {self.student.username}"

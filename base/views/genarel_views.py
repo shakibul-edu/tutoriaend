@@ -8,7 +8,7 @@ from rest_framework import status
 from ..utils import calculate_distance, string_to_point
 from copy  import deepcopy
 from ..models import (TeacherProfile,
-                      Availability)
+                      Availability, UserDashboard)
 from ..serializer import ( AvailabilitySerializer)
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
@@ -183,7 +183,21 @@ class AvailabilityViewSet(ModelViewSet):
 
     
 
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticatedAndNotBanned])
+def user_dashboard(request):
+    """
+    Retrieve the dashboard data for the authenticated user.
+    """
+    user_dashboard, created = UserDashboard.objects.get_or_create(user=request.user)
+   
+    dashboard_data = {
+        "total_contact_requests_sent": user_dashboard.total_requests_sent,
+        "total_contact_requests_received": user_dashboard.total_requests_received,
+        "total_pending_requests": user_dashboard.total_pending_requests,
+        
+    }
+    return Response(dashboard_data, status=status.HTTP_200_OK)
 
 
 

@@ -8,8 +8,8 @@ from base.serializer import  AcademicProfileSerializer, ContactRequestSerializer
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from base.custom_permission import IsAuthenticatedAndNotBanned
-from base.models import AcademicProfile, TeacherProfile, ContactRequest, UserDashboard
-from base.serializer import AcademicProfileSerializer
+from base.models import AcademicProfile, TeacherProfile, ContactRequest, UserDashboard, TeacherReview
+from base.serializer import AcademicProfileSerializer, TeacherReviewSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
@@ -91,3 +91,40 @@ class ContactRequestViewSet(viewsets.ModelViewSet):
             if user_dashboard.total_pending_requests > 0:
                 user_dashboard.total_pending_requests -= 1
                 user_dashboard.save()
+
+
+class TeacherReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = TeacherReviewSerializer
+    permission_classes = [IsAuthenticatedAndNotBanned]
+    # parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        # Return contact requests where the user is either a student or a teacher (both fields are CustomUser)
+        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
+        if teacher is None:
+            return TeacherReview.objects.filter(contact_request__student=self.request.user)
+        return TeacherReview.objects.filter(
+            Q(contact_request__student=self.request.user) | Q(contact_request__teacher=teacher)
+        ).distinct()
+
+    def perform_create(self, serializer):
+        contact_request_id = self.request.data.get('contact_request')
+        contact_request_obj = ContactRequest.objects.filter(id=contact_request_id).first()
+        if not contact_request_id or not contact_request_obj:
+            raise ValidationError({"contact_request": "Invalid or missing contact request."})
+        if not contact_request_obj.student == self.request.user:
+            raise ValidationError({"contact_request": "This field is required."})
+        serializer.save(contact_request=contact_request_obj)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticatedAndNotBanned])
+def review_by_tutorId(request, pk):
+    try:
+
+        teacher = TeacherProfile.objects.get(pk=pk)
+        review_list = TeacherReview.objects.filter(contact_request__teacher=teacher)
+        review_serializer = TeacherReviewSerializer(review_list, many=True)
+        return Response(review_serializer.data, status=status.HTTP_200_OK)
+    except TeacherProfile.DoesNotExist:
+        return Response({'detail': 'Teacher does not found!'}, status=status.HTTP_404_NOT_FOUND)
+    

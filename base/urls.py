@@ -14,7 +14,7 @@ router.register(r'job-post', views.JobPostViewSet, basename='job_post')
 router.register(r'bid-job', views.BidJobViewSet, basename='bid_job')
 router.register(r'job-post-availability', views.JobPostAvailabilityViewSet, basename='job_post_availability')
 router.register(r'contact-request', views.ContactRequestViewSet, basename='contact_request')
-
+router.register(r'teacher-review', views.TeacherReviewViewSet, basename='teacher_review')
 
 
 
@@ -28,5 +28,7 @@ urlpatterns = [
     path('subject-by-grade/', views.get_subjects_by_grade, name='get_subject_by_grade'),
     path('teacher/full-profile/<int:pk>/', views.get_teacher_full_profile, name='get_teacher_full_profile'),
     path('filter-teachers/', views.filter_teachers, name='filter_teachers'),
+    path('review-by-teacher/<int:pk>/', views.review_by_tutorId, name='get_reviews_by_teacher'),
+    path('user/dashboard/', views.user_dashboard, name='user_dashboard'),
 ]
 urlpatterns += router.urls
