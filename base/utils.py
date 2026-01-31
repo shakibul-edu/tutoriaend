@@ -1,8 +1,53 @@
 
 from datetime import time
-from .models import Availability, TeacherProfile 
+from .models import Availability, TeacherProfile,TeacherReview 
 from django.contrib.gis.geos import Point
+from django.db.models import Avg
 from geopy.distance import geodesic
+from rest_framework.views import exception_handler
+from rest_framework.response import Response
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def custom_exception_handler(exc, context):
+    """
+    Custom exception handler for REST framework that logs errors
+    and provides better error responses in production.
+    """
+    # Call REST framework's default exception handler first
+    response = exception_handler(exc, context)
+    
+    # Log the exception details
+    if response is None:
+        # This means the exception was not handled by DRF's default handler
+        # Log the full exception for debugging
+        logger.error(
+            f"Unhandled exception: {exc.__class__.__name__}: {str(exc)}",
+            exc_info=True,
+            extra={'context': context}
+        )
+        
+        # Return a generic 500 error response
+        return Response(
+            {
+                'detail': 'An internal server error occurred. Please try again later.',
+                'error_type': exc.__class__.__name__
+            },
+            status=500
+        )
+    
+    # Log handled exceptions at warning level
+    logger.warning(
+        f"API exception: {exc.__class__.__name__}: {str(exc)}",
+        extra={
+            'status_code': response.status_code,
+            'context': context
+        }
+    )
+    
+    return response
 
 def calculate_distance(loc1: Point, loc2: Point) -> float:
     """
@@ -107,4 +152,12 @@ def get_availability_grouped_by_time(teacher:TeacherProfile):
     
     result = list(grouped.values())
     return result
+
+def get_average_review(tutor: TeacherProfile):
+    reviews = TeacherReview.objects.filter(contact_request__teacher=tutor)
+    reviews_count = reviews.count()
+    if not reviews.exists():
+        return None, 0
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
+    return round(avg_rating, 2), reviews_count
 

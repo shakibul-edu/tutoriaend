@@ -7,4 +7,12 @@ class IsAuthenticatedAndNotBanned(BasePermission):
     """
 
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and not request.user.banned)
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Check if user is banned
+        try:
+            return not request.user.banned
+        except AttributeError:
+            # If 'banned' attribute doesn't exist, allow access
+            return True

@@ -25,12 +25,15 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)xtl6)!05!_i&j^xw%8j&
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS',
-    '.herokuapp.com,tutoriaend.shakibul.me,www.tutoriaend.shakibul.me,localhost,127.0.0.1'
+    '.herokuapp.com,tutoriaend.shakibul.me,www.tutoriaend.shakibul.me,localhost,127.0.0.1,etuition.app,www.etuition.app,tuitions.shakibul.me,www.tuitions.shakibul.me'
 ).split(',')
+
+# Strip whitespace from each host
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS]
 
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    'https://*.herokuapp.com,https://tutoriaend.shakibul.me,http://localhost,http://127.0.0.1'
+    'https://*.herokuapp.com,https://tutoriaend.shakibul.me,http://localhost,http://127.0.0.1,https://etuition.app,https://www.etuition.app,https://www.tuitions.shakibul.me'
 ).split(',')
 
 # Security Settings for Production
@@ -58,6 +61,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.gis',
     'rest_framework',
+    'corsheaders',
     'rest_framework_simplejwt',
     "drf_spectacular",
     "drf_spectacular_sidecar",
@@ -68,6 +72,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware", # Add WhiteNoise middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -99,6 +104,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser', # This is critical for file uploads
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    'EXCEPTION_HANDLER': 'base.utils.custom_exception_handler',
 }
 
 SPECTACULAR_SETTINGS = {
@@ -212,3 +218,70 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+# Expose authorization headers for authenticated requests
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000", 
+#     "http://127.0.0.1:3000",
+#     "https://tutoriaend.shakibul.me",
+#     "https://www.tutoriaend.shakibul.me",
+#     "https://tuitions.shakibul.me",
+#     "https://www.tuitions.shakibul.me",
+#     "https://etuition.app",
+#     "https://www.etuition.app",
+# ]
+
+# Logging Configuration for Production Debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'base': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+    },
+}
