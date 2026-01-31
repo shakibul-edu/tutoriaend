@@ -4,44 +4,27 @@ import os
 import dj_database_url
 from datetime import timedelta
 
-# GDAL_LIBRARY_PATH = 'C:/OSGeo4W/bin/gdal311.dll'
-# GDAL_DATA='C:/OSGeo4W/apps/gdal/share/gdal'
-# PROJ_LIB='C:/OSGeo4W/share/proj'
-
-
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv()
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
+# --- SECURITY ---
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-)xtl6)!05!_i&j^xw%8j&c&71_#a@a$$5vs9-kk5e(r^i6d6+_')
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS',
     '.herokuapp.com,tutoriaend.shakibul.me,www.tutoriaend.shakibul.me,localhost,127.0.0.1,etuition.app,www.etuition.app,tuitions.shakibul.me,www.tuitions.shakibul.me'
-).split(',')
-
-# Strip whitespace from each host
-ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS]
+).replace(' ', '').split(',')
 
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
     'https://*.herokuapp.com,https://tutoriaend.shakibul.me,http://localhost,http://127.0.0.1,https://etuition.app,https://www.etuition.app,https://www.tuitions.shakibul.me'
-).split(',')
+).replace(' ', '').split(',')
 
-# Security Settings for Production
 if not DEBUG:
-    # CRITICAL FIX: This tells Django to trust Heroku's SSL termination
-    # preventing the infinite redirect loop.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
     SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True') == 'True'
     CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True') == 'True'
@@ -49,16 +32,16 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True') == 'True'
     SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'True') == 'True'
 
-
-# Application definition
-
+# --- APPLICATION DEFINITION ---
 INSTALLED_APPS = [
+    'cloudinary_storage',  # MANDATORY: Must be at the very top
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary',
     'django.contrib.gis',
     'rest_framework',
     'corsheaders',
@@ -70,7 +53,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware", # Add WhiteNoise middleware
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -83,16 +66,13 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'tutoria.urls'
 AUTH_USER_MODEL = 'base.CustomUser'
 
+# --- REST FRAMEWORK ---
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        # 'base.authentication.GoogleIDTokenAuthentication',
-        # 'base.authentication.GoogleIDTokenAuthenticationExtension',
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '4/minute',
@@ -101,36 +81,83 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
         'rest_framework.parsers.FormParser',
-        'rest_framework.parsers.MultiPartParser', # This is critical for file uploads
+        'rest_framework.parsers.MultiPartParser',
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    'EXCEPTION_HANDLER': 'base.utils.custom_exception_handler',
 }
 
-SPECTACULAR_SETTINGS = {
-    'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
-    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
-    'REDOC_DIST': 'SIDECAR',
-    "TITLE": "Tutoria API",
-    "DESCRIPTION": "API documentation for Tutoria project",
-    'COMPONENT_SPLIT_REQUEST': True,
-    "SECURITY_DEFINITIONS": 'base.authentication.GoogleIDTokenAuthenticationExtension',
-    # "SECURITY_DEFINITIONS": 'rest_framework_simplejwt.authentication.JWTAuthentication',
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,  # don’t expose raw schema at /api/schema/
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", 
+    "http://127.0.0.1:3000",
+    "https://tutoriaend.shakibul.me",
+    "https://www.tutoriaend.shakibul.me",
+    "https://tuitions.shakibul.me",
+    "https://www.tuitions.shakibul.me",
+    "https://etuition.app",
+    "https://www.etuition.app",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+# --- DATABASE ---
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600, 
+            ssl_require=True,
+            engine='django.contrib.gis.db.backends.postgis'
+        )
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': 'mygeo',
+            'USER': 'postgres',
+            'PASSWORD': 'sa714010',
+            'HOST': 'db',
+            'PORT': '5432',
+        }
+    }
+
+# --- STORAGE CONFIGURATION ---
+
+# Cloudinary Credentials
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
 }
 
+# Use the modern STORAGES setting (Django 4.2+)
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# --- REMAINING SETTINGS ---
+WSGI_APPLICATION = 'tutoria.wsgi.application'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
-    "UPDATE_LAST_LOGIN": False,
-
     "ALGORITHM": "HS256",
-
 }
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -145,143 +172,3 @@ TEMPLATES = [
         },
     },
 ]
-
-WSGI_APPLICATION = 'tutoria.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-if os.environ.get('DATABASE_URL'):
-    # Production database setup using Heroku's DATABASE_URL
-    DATABASES = {
-        'default': dj_database_url.config(
-            conn_max_age=600, 
-            ssl_require=True,
-            engine='django.contrib.gis.db.backends.postgis'
-        )
-    }
-else:
-    # Fallback for local development (connecting to your local Docker Compose)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.contrib.gis.db.backends.postgis', # GeoDjango Engine
-            'NAME': 'mygeo',
-            'USER': 'postgres',
-            'PASSWORD': 'sa714010',
-            'HOST': 'db', # Matches your local docker-compose db service name
-            'PORT': '5432',
-        }
-    }
-
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-
-# Expose authorization headers for authenticated requests
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000", 
-#     "http://127.0.0.1:3000",
-#     "https://tutoriaend.shakibul.me",
-#     "https://www.tutoriaend.shakibul.me",
-#     "https://tuitions.shakibul.me",
-#     "https://www.tuitions.shakibul.me",
-#     "https://etuition.app",
-#     "https://www.etuition.app",
-# ]
-
-# Logging Configuration for Production Debugging
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'base': {
-            'handlers': ['console'],
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-        },
-    },
-}

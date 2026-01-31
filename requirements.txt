@@ -3,8 +3,10 @@ attrs==25.4.0
 cachetools==5.5.2
 certifi==2025.4.26
 charset-normalizer==3.4.2
+cloudinary==1.44.1
 dj-database-url==3.0.1
 Django==5.2.1
+django-cloudinary-storage==0.3.0
 django-cors-headers==4.9.0
 django-filter==25.1
 djangorestframework==3.16.0
@@ -33,6 +35,7 @@ referencing==0.37.0
 requests==2.32.3
 rpds-py==0.30.0
 rsa==4.9.1
+six==1.17.0
 sqlparse==0.5.3
 typing_extensions==4.15.0
 tzdata==2025.2
