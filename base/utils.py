@@ -52,8 +52,16 @@ def custom_exception_handler(exc, context):
 def calculate_distance(loc1: Point, loc2: Point) -> float:
     """
     Calculates the distance using geopy's geodesic method between two Point objects.
+    Returns None if either location is None or invalid.
     """
-    return round(geodesic((loc1.y, loc1.x), (loc2.y, loc2.x)).km,2)
+    if loc1 is None or loc2 is None:
+        return None
+    
+    try:
+        return round(geodesic((loc1.y, loc1.x), (loc2.y, loc2.x)).km, 2)
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning(f"Failed to calculate distance: {e}")
+        return None
 
 
 

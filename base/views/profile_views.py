@@ -194,9 +194,17 @@ def filter_teachers(request):
     grade = request.GET.get('grade')
     distance = request.GET.get('distance')
     tuition_type = request.GET.get('tuitionType')
-    if distance and hasattr(request.user, 'location'):
-        user_location = request.user.location
-        queryset = queryset.filter(user__location__distance_lte=(user_location, D(km=float(distance))))
+    
+    # Only apply distance filter if user has a valid location (not None)
+    if distance and hasattr(request.user, 'location') and request.user.location is not None:
+        try:
+            user_location = request.user.location
+            queryset = queryset.filter(user__location__distance_lte=(user_location, D(km=float(distance))))
+        except Exception as e:
+            # Log the error but don't fail the entire request
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Distance filter failed: {e}")
 
     if max_salary:
         queryset = queryset.filter(min_salary__lte=max_salary)
@@ -208,8 +216,21 @@ def filter_teachers(request):
         queryset = queryset.filter(teaching_mode__iexact=tuition_type)
 
     # Only return overview fields
-    data = [
-        {
+    data = []
+    for teacher in queryset:
+        # Safely calculate distance only if both locations exist and are not None
+        distance_value = None
+        try:
+            if (hasattr(request.user, 'location') and request.user.location is not None and 
+                hasattr(teacher.user, 'location') and teacher.user.location is not None):
+                distance_value = calculate_distance(request.user.location, teacher.user.location)
+        except Exception as e:
+            # Log but don't fail
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Distance calculation failed for teacher {teacher.id}: {e}")
+        
+        data.append({
             "id": teacher.id,
             "name": teacher.user.get_full_name(),
             "gender": teacher.gender,
@@ -219,12 +240,10 @@ def filter_teachers(request):
             "teaching_mode": teacher.teaching_mode,
             "reviews_average": get_average_review(teacher)[0],
             "reviews_count": get_average_review(teacher)[1],
-            "distance": calculate_distance(request.user.location, teacher.user.location) if hasattr(request.user, 'location') and hasattr(teacher.user, 'location') else None,
+            "distance": distance_value,
             "expected_salary": teacher.min_salary,
             "maximum_grade": max((grade for grade in teacher.grade_list.all()), key=lambda g: g.sequence, default=None).name if teacher.grade_list.all() else None,
             "profile_picture": teacher.profile_picture.url if teacher.profile_picture else None,
-        }
-        for teacher in queryset
-    ]
+        })
     return Response(data, status=status.HTTP_200_OK)
 

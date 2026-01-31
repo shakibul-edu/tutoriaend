@@ -58,15 +58,24 @@ def set_location(request):
     Expects a JSON body with a 'location' field.
     """
     print("initiated set_location view")
-    location = string_to_point(request.data.get('location'))
     
-    if not location:
-        return Response({"error": "Location is required."}, status=400)
+    try:
+        location_data = request.data.get('location')
+        if not location_data:
+            return Response({"error": "Location is required."}, status=400)
+            
+        location = string_to_point(location_data)
+        
+        if not location:
+            return Response({"error": "Invalid location format. Use 'lat,lon,accuracy' format."}, status=400)
+    except (ValueError, TypeError, AttributeError) as e:
+        return Response({"error": f"Invalid location format: {str(e)}"}, status=400)
+    
     # Check if user already has a location
     previous_location = getattr(request.user, "location", None)
 
     print(f"Received location: {location}")
-    print(f"Received location: {previous_location}")
+    print(f"Previous location: {previous_location}")
     update_param = request.GET.get("update")
 
     if previous_location:
@@ -83,9 +92,8 @@ def set_location(request):
             )  
         elif distance is not None and distance < .2:
             return Response({"detail": "Location don't need to be updated. The new location is within 200 meters of the previous location."},status=200)
+    
     user = request.user
-    if not location:
-        return Response({"error": "Invalid location format. Use 'lon,lat' format."}, status=400)
     user.location = location
     user.save()
     return Response({"detail": "Location updated successfully."}, status=200)
