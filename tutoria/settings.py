@@ -134,9 +134,10 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "cloudinary_storage.storage.StaticCloudinaryStorage",
     },
 }
+STATICFILES_STORAGE = 'cloudinary_storage.storage.StaticCloudinaryStorage'
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
