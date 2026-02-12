@@ -99,13 +99,24 @@ class TeacherReviewViewSet(viewsets.ModelViewSet):
     # parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        # Return contact requests where the user is either a student or a teacher (both fields are CustomUser)
-        teacher = TeacherProfile.objects.filter(user=self.request.user).first()
-        if teacher is None:
-            return TeacherReview.objects.filter(contact_request__student=self.request.user)
-        return TeacherReview.objects.filter(
-            Q(contact_request__student=self.request.user) | Q(contact_request__teacher=teacher)
-        ).distinct()
+        user = self.request.user
+
+        filters = Q(contact_request__student=user)
+
+        # Teacher can ALSO see reviews written about them
+        if hasattr(user, "teacherprofile"):
+            filters |= Q(contact_request__teacher=user.teacherprofile)
+
+        return (
+            TeacherReview.objects
+            .select_related(
+                "contact_request",
+                "contact_request__student",
+                "contact_request__teacher",
+            )
+            .filter(filters)
+            .distinct()
+        )
 
     def perform_create(self, serializer):
         contact_request_id = self.request.data.get('contact_request')
@@ -116,15 +127,27 @@ class TeacherReviewViewSet(viewsets.ModelViewSet):
             raise ValidationError({"contact_request": "This field is required."})
         serializer.save(contact_request=contact_request_obj)
 
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticatedAndNotBanned])
 def review_by_tutorId(request, pk):
-    try:
+    reviews = (
+        TeacherReview.objects
+        .select_related(
+            "contact_request",
+            "contact_request__student",
+            "contact_request__teacher",
+        )
+        .filter(contact_request__teacher_id=pk)
+    )
 
-        teacher = TeacherProfile.objects.get(pk=pk)
-        review_list = TeacherReview.objects.filter(contact_request__teacher=teacher)
-        review_serializer = TeacherReviewSerializer(review_list, many=True)
-        return Response(review_serializer.data, status=status.HTTP_200_OK)
-    except TeacherProfile.DoesNotExist:
-        return Response({'detail': 'Teacher does not found!'}, status=status.HTTP_404_NOT_FOUND)
-    
+    if not reviews.exists():
+        return Response(
+            {"detail": "Teacher not found or no reviews available."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    serializer = TeacherReviewSerializer(reviews, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+

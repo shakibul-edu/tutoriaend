@@ -85,7 +85,7 @@ def get_mediums(request):
         ),
     }
 )
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
 def get_grades_by_medium(request):
@@ -94,7 +94,7 @@ def get_grades_by_medium(request):
     Expects 'medium_id' as a POST field (array of IDs).
     Example: {"medium_id": [1, 2]}
     """
-    medium_ids = request.data.get('medium_id')
+    medium_ids = request.GET.getlist('medium_id')
     if not medium_ids or not isinstance(medium_ids, list):
         return Response({"detail": "medium_id parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
     mediums = Medium.objects.filter(id__in=medium_ids)
@@ -169,7 +169,7 @@ def get_grades_by_medium(request):
         ),
     }
 )
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([UserRateThrottle, AnonRateThrottle])
 def get_subjects_by_grade(request):
@@ -178,7 +178,7 @@ def get_subjects_by_grade(request):
     Expects 'grade_id' as a POST field (array of IDs).
     Example: {"grade_id": [1, 2]}
     """
-    grade_ids = request.data.get('grade_id')
+    grade_ids = request.GET.getlist('grade_id')
     if not grade_ids or not isinstance(grade_ids, list):
         return Response({"detail": "grade_id parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
     grades = Grade.objects.filter(id__in=grade_ids)

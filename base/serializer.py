@@ -1,8 +1,9 @@
 from .models import (TeacherProfile, AcademicProfile, Qualification,
      Availability, Grade, Subject, JobPost, BidJob, JobPostAvailability
-     , ContactRequest, TeacherReview)
+     , ContactRequest, TeacherReview, Medium)
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
+from .utils import calculate_distance
 
 class AvailabilitySerializer(serializers.ModelSerializer):
     class Meta:
@@ -165,6 +166,10 @@ class GradeSerializer(serializers.ModelSerializer):
         model = Grade
         fields = '__all__'
 
+class MediumSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Medium
+        fields = '__all__'
 
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -174,44 +179,160 @@ class SubjectSerializer(serializers.ModelSerializer):
             'grade': {'required': False, 'allow_null': True},
         }
 
+
+class JobPostAvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobPostAvailability
+        fields = '__all__'
+        extra_kwargs = {
+            'id': {'read_only': True},
+        }
+    
+    def validate(self, data):
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        if start_time and end_time and start_time >= end_time:
+            raise serializers.ValidationError(
+                {"end_time": "End time must be after the start time."}
+            )
+        return data
+
+
 class JobPostSerializer(serializers.ModelSerializer):
-    availability = AvailabilitySerializer(many=True, read_only=True, source='jobpostavailability_set')
+    availability = JobPostAvailabilitySerializer(many=True, read_only=True, source='availabilities')
+    grade = GradeSerializer(read_only=True)
+    subject_list = SubjectSerializer(read_only=True, many=True)
+    medium = MediumSerializer(read_only=True)
+    bids_count = serializers.IntegerField(read_only=True)
+    editable = serializers.SerializerMethodField()
+    distance = serializers.SerializerMethodField()
+    posted_by_name = serializers.SerializerMethodField()
+    is_biddable = serializers.SerializerMethodField()
+
+    # ---------- WRITE (input) ----------
+    grade_id = serializers.PrimaryKeyRelatedField(
+        queryset=Grade.objects.all(),
+        source="grade",
+        write_only=True,
+        required=False
+    )
+    medium_id = serializers.PrimaryKeyRelatedField(
+        queryset=Medium.objects.all(),
+        source="medium",
+        write_only=True,
+        required=False
+    )
+    subject_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Subject.objects.all(),
+        source="subject_list",
+        many=True,
+        write_only=True,
+        required=False
+    )
     class Meta:
         model = JobPost
         fields = '__all__'
         extra_kwargs = {
             'id': {'read_only': True},
             'posted_by': {'read_only': True},
-            'status': {'read_only': True},
         }
     
     def validate(self, data):
-        # Ensure that the user does not have more than 5 active job posts
-        user = self.context['request'].user
-        active_posts_count = JobPost.objects.filter(posted_by=user, status='active').count()
-        if active_posts_count >= 2:
-            raise serializers.ValidationError({"detail": "You cannot have more than 2 active job posts."})
+        user = self.context["request"].user
+
+        if self.instance is None:
+            open_posts_count = JobPost.objects.filter(
+                posted_by=user,
+                status="open"
+            ).count()
+
+            if open_posts_count > 2:
+                raise serializers.ValidationError(
+                    {"detail": "You cannot have more than 2 open job posts."}
+                )
+
         return data
+
+    def get_editable(self, obj):
+        return obj.posted_by == self.context["request"].user
+
+
+    def get_posted_by_name(self, obj):
+        return obj.posted_by.get_full_name()
+
+
+    def get_distance(self, obj):
+        user = self.context["request"].user
+        if user.location and obj.posted_by.location:
+            return calculate_distance(user.location, obj.posted_by.location)
+        return None
+
+    def get_is_biddable(self, obj):
+        request = self.context.get("request")
+        user = request.user if request else None
+
+        if not user or not user.is_authenticated:
+            return False
+
+        # User must be a teacher
+        teacher = getattr(user, "teacher_profile", None)
+        if not teacher:
+            return False
+
+        # Cannot bid on own job
+        if obj.posted_by_id == user.id:
+            return False
+
+        # Job must be open
+        if obj.status != "open":
+            return False
+
+        # Prevent duplicate bid (optimized)
+        return not obj.bids.filter(tutor_id=teacher.id).exists()
 
 
 class BidJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = BidJob
-        fields = '__all__'
+        fields = "__all__"
         extra_kwargs = {
-            'id': {'read_only': True},
-            'tutor': {'read_only': True},
+            "id": {"read_only": True},
+            "tutor": {"read_only": True},
         }
-    
-    def validate(self, data):
-        tutor = self.context['request'].user
-        job_post = self.context['job_post']
-        
-        # Check if the tutor has already placed a bid on this job post
-        if BidJob.objects.filter(tutor=tutor, job_post=job_post).exists():
-            raise serializers.ValidationError({"detail": "You have already placed a bid on this job post."})
-        
-        return data
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        tutor = getattr(request.user, "teacher_profile", None)
+
+        # 🔹 UPDATE (PATCH / PUT)
+        if self.instance:
+            return attrs
+
+        # 🔹 CREATE only logic
+        job = attrs.get("job")
+
+        if not job:
+            raise serializers.ValidationError({"job": "Job is required."})
+
+        if not tutor:
+            raise serializers.ValidationError(
+                {"detail": "Only teachers can place bids."}
+            )
+
+        if BidJob.objects.filter(job=job, tutor=tutor).exists():
+            raise serializers.ValidationError(
+                {"detail": "You have already placed a bid on this job."}
+            )
+
+        return attrs
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["teacher_phone"] = (
+            instance.tutor.phone if instance.tutor else None
+        )
+        return representation
+
     
 class JobPostAvailabilitySerializer(serializers.ModelSerializer):
     class Meta:

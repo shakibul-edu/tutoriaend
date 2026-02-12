@@ -59,5 +59,7 @@ class GoogleLoginView(APIView):
                 "id": user.id,
                 "email": user.email,
                 "name": user.get_full_name(),
+                "is_teacher": getattr(user, 'is_teacher', False),
+                "banned": getattr(user, 'banned', False),
             }
         })

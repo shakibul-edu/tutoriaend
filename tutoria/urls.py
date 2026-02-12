@@ -27,13 +27,14 @@ from drf_spectacular.views import (
 from base.authentication import GoogleLoginView
 from tutoria import settings
 from django.conf.urls.static import static
+from .views import CustomTokenObtainPairView, CustomTokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("auth/google/", GoogleLoginView.as_view()),
     path('', include('base.urls')),  # Include the base app's URLs
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include('rest_framework.urls')),  # Include DRF's authentication URLs
 
     # Raw OpenAPI schema

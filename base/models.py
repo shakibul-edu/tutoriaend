@@ -199,29 +199,35 @@ class Availability(models.Model):
 
 
 class JobPost(models.Model):
+    JOB_STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('closed', 'Closed'),
+    ]
+    status = models.CharField(max_length=10, choices=JOB_STATUS_CHOICES, default='open')
+
     title = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20, blank=True, null=True, help_text="Contact phone number for the job post.")
     description = models.TextField()
     posted_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='job_posts')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    min_salary = models.PositiveIntegerField(default=0, help_text="Minimum expected salary for the job post.")
-    max_salary = models.PositiveIntegerField(default=0, help_text="Maximum expected salary for the job post.")
-    preffered_distance = models.PositiveIntegerField(default=0, help_text="Preferred distance for the job in kilometers.")
+    budget_salary = models.PositiveIntegerField(default=0, help_text="Minimum expected salary for the job post.")
     medium = models.ForeignKey(Medium, on_delete=models.SET_NULL, null=True, blank=True, related_name='job_posts')
     grade = models.ForeignKey(Grade, on_delete=models.SET_NULL, null=True, blank=True, related_name='job_posts')
-    subject = models.ManyToManyField(Subject, blank=True, related_name='job_posts')
+    subject_list = models.ManyToManyField(Subject, blank=True, related_name='job_posts')
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, blank=True)
     teaching_mode = models.CharField(max_length=20, choices=TEACHING_CHOICES, blank=True)
-    highest_qualification = models.CharField(max_length=50, choices=QUALIFICATION_CHOICES, blank=True, help_text="The highest educational qualification required for the job.")
+    minimum_qualification = models.CharField(max_length=50, choices=QUALIFICATION_CHOICES, blank=True, help_text="The highest educational qualification required for the job.")
 
     def clean(self):
-        if self.min_salary and self.max_salary and self.min_salary > self.max_salary:
+        if self.budget_salary and self.budget_salary < 0:
             raise ValidationError({'max_salary': _('Maximum salary must be greater than or equal to minimum salary.')})
-        if self.grade and self.subject.exists():
-            invalid_subjects = self.subject.exclude(grade=self.grade)
+        # Only validate many-to-many relationships if the object has been saved (has a pk)
+        if self.pk and self.grade and self.subject_list.exists():
+            invalid_subjects = self.subject_list.exclude(grade=self.grade)
             if invalid_subjects.exists():
                 raise ValidationError({
-                    'subject': _('All selected subjects must belong to the selected grade.')
+                    'subject_list': _('All selected subjects must belong to the selected grade.')
                 })
 
 
@@ -229,7 +235,7 @@ class JobPost(models.Model):
 class JobPostAvailability(models.Model):
     DAY_CHOICES = Availability.DAY_CHOICES
     job_post = models.ForeignKey(
-        'JobPost',
+        JobPost,
         on_delete=models.CASCADE,
         related_name='availabilities',
         help_text="The job post associated with this availability slot."
@@ -259,19 +265,8 @@ class JobPostAvailability(models.Model):
     def __str__(self):
         return f"{self.job_post.title} - ({self.start_time.strftime('%I:%M %p')} - {self.end_time.strftime('%I:%M %p')})"
 
-    def __str__(self):
-        return self.title
-    
-class BidJob(models.Model):
-    job = models.ForeignKey(JobPost, on_delete=models.CASCADE, related_name='bids')
-    tutor = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name='bids')
-    proposed_salary = models.PositiveIntegerField(help_text="The salary proposed by the tutor for the   job.")
-    message = models.TextField(blank=True, null=True, help_text="An optional message from the tutor.")
-    created_at = models.DateTimeField(auto_now_add=True)
 
-
-class ContactRequest(models.Model):
-    STATUS_CHOICES = [
+STATUS_CHOICES = [
         ("pending", "Pending"),
         ("seen", "Seen"),
         ("accepted", "Accepted"),
@@ -279,6 +274,18 @@ class ContactRequest(models.Model):
         ("contacted", "Contacted"),
         ("closed", "Closed"),
     ]
+
+class BidJob(models.Model):
+    job = models.ForeignKey(JobPost, on_delete=models.CASCADE, related_name='bids')
+    tutor = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name='bids')
+    proposed_salary = models.PositiveIntegerField(help_text="The salary proposed by the tutor for the   job.")
+    message = models.TextField(blank=True, null=True, help_text="An optional message from the tutor.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+
+
+class ContactRequest(models.Model):
+    
 
     student = models.ForeignKey(CustomUser, related_name="sent_requests", on_delete=models.CASCADE)
     teacher = models.ForeignKey(TeacherProfile, related_name="received_requests", on_delete=models.CASCADE)
