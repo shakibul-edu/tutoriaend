@@ -142,11 +142,6 @@ def review_by_tutorId(request, pk):
         .filter(contact_request__teacher_id=pk)
     )
 
-    if not reviews.exists():
-        return Response(
-            {"detail": "Teacher not found or no reviews available."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
 
     serializer = TeacherReviewSerializer(reviews, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
