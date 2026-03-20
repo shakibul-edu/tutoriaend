@@ -360,6 +360,7 @@ class ContactRequestSerializer(serializers.ModelSerializer):
             'created_at': {'read_only': True},
             'updated_at': {'read_only': True},
             'student': {'read_only': True},
+            'is_accept_notified': {'read_only': True},
         }
     
     def to_representation(self, instance):

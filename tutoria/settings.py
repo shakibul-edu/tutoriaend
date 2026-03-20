@@ -206,3 +206,5 @@ USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@etuition.app")

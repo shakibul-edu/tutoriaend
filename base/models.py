@@ -103,7 +103,7 @@ QUALIFICATION_CHOICES = [
     ('phd', 'PhD')
 ]
 
-class TeacherProfile(models.Model):
+class   TeacherProfile(models.Model):
     user = models.OneToOneField('CustomUser', on_delete=models.CASCADE, related_name='teacher_profile')
     verified = models.BooleanField(default=False, help_text="Indicates if the teacher's profile has been verified by an admin.")
     bio = models.TextField(blank=True, null=True, help_text="A brief biography of the teacher.")
@@ -300,6 +300,7 @@ class ContactRequest(models.Model):
     email_opened_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_accept_notified = models.BooleanField(default=False)
 
 class UserDashboard(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='request_manager')

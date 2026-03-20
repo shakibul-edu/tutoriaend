@@ -8,3 +8,6 @@ class BaseConfig(AppConfig):
     def ready(self):
         import base.signals 
         return super().ready()
+
+
+
