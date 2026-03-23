@@ -141,6 +141,11 @@ class   TeacherProfile(models.Model):
             {'user': _('User must update their location before creating a teacher profile.')}
             )
 
+    def save(self, *args, **kwargs):
+        # Always enforce model-level validation for API and non-form saves.
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 class Availability(models.Model):
     """

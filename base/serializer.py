@@ -98,6 +98,11 @@ class TeacherProfileSerializer(serializers.ModelSerializer):
         teacher = TeacherProfile.objects.filter(user=self.context['request'].user).exists()
         if teacher and self.instance is None:
             raise serializers.ValidationError({"detail": "A teacher profile already exists for this user."})
+        user = self.context['request'].user
+        if self.instance is None and user.location is None:
+            raise serializers.ValidationError(
+                {"user": "User must update their location before creating a teacher profile."}
+            )
         return data
 
     def to_representation(self, instance: TeacherProfile):

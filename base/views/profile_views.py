@@ -30,6 +30,8 @@ class TeacherProfileViewSet(viewsets.ModelViewSet):
         return TeacherProfile.objects.filter(user=user)
 
     def perform_create(self, serializer):
+        self.request.user.is_teacher = True
+        self.request.user.save()
         serializer.save(user=self.request.user)
 
     def perform_update(self, serializer):
