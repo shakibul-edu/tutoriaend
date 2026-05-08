@@ -1,6 +1,6 @@
 from .models import (TeacherProfile, AcademicProfile, Qualification,
      Availability, Grade, Subject, JobPost, BidJob, JobPostAvailability
-     , ContactRequest, TeacherReview, Medium)
+     , ContactRequest, TeacherReview, Medium, ChatReport, Appeal)
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 from .utils import calculate_distance
@@ -428,4 +428,22 @@ class TeacherReviewSerializer(serializers.ModelSerializer):
             contact_obj.teacher.id if contact_obj and contact_obj.teacher else ""
         )
         return representation
-   
+
+class ChatReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChatReport
+        fields = '__all__'
+        extra_kwargs = {
+            'id': {'read_only': True},
+            'reporter': {'read_only': True},
+        }
+
+class AppealSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appeal
+        fields = '__all__'
+        extra_kwargs = {
+            'id': {'read_only': True},
+            'appellant': {'read_only': True},
+            'status': {'read_only': True},
+        }

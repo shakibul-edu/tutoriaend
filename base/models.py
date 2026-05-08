@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models as geomodels
- 
+import uuid
 
 class CustomUser(AbstractUser):
     is_teacher = models.BooleanField(default=False)
@@ -306,6 +306,15 @@ class ContactRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_accept_notified = models.BooleanField(default=False)
+    
+
+    conversation_key = models.UUIDField(
+    default=uuid.uuid4,
+    editable=False,
+    unique=True,
+    null=True,
+    blank=True
+)
 
 class UserDashboard(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='request_manager')
@@ -327,3 +336,29 @@ class TeacherReview(models.Model):
 
     def __str__(self):
         return f"Review of {self.teacher.user.username} by {self.student.username}"
+
+class ChatReport(models.Model):
+    contact_request = models.ForeignKey(ContactRequest, on_delete=models.CASCADE, related_name='chat_reports', help_text="The contact request associated with this chat report.")
+    reporter = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='chat_reports', help_text="The user who is reporting the chat.")
+    reason = models.TextField(help_text="The reason for reporting the chat.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    conversation_key = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"Chat Report by {self.reporter.username} for Contact Request {self.contact_request.id}"
+
+
+class Appeal(models.Model):
+    appellant = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='appeals', help_text="The user who is making the appeal.")
+    feedback = models.TextField(help_text="The reason for making the appeal.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+
+    def __str__(self):
+        return f"Appeal by {self.appellant.username}"
