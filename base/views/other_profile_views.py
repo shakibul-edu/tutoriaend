@@ -13,6 +13,7 @@ from base.serializer import AcademicProfileSerializer, TeacherReviewSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
+import uuid
 
 
 class AcademicProfileViewSet(viewsets.ModelViewSet):
@@ -83,6 +84,10 @@ class ContactRequestViewSet(viewsets.ModelViewSet):
         
         # Save the updated contact request
         instance = serializer.save()
+        # If status changed to accepted, ensure a conversation_key is generated and saved
+        if instance.status == 'accepted' and not getattr(instance, 'conversation_key', None):
+            instance.conversation_key = uuid.uuid4()
+            instance.save()
         
         # If status changed from pending, decrement pending counter
         if old_status == 'pending' and instance.status != 'pending':

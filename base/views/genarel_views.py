@@ -1,17 +1,16 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view,permission_classes, throttle_classes
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import  AllowAny, IsAuthenticated
 from base.custom_permission import IsAuthenticatedAndNotBanned
 from rest_framework.response import Response
 from rest_framework import status
 from ..utils import calculate_distance, string_to_point
-from copy  import deepcopy
-from ..models import (TeacherProfile,
-                      Availability, UserDashboard)
-from ..serializer import ( AvailabilitySerializer)
+
+from ..models import (Appeal, TeacherProfile,
+                      Availability, UserDashboard, ContactRequest,ChatReport)
+from ..serializer import ( AppealSerializer, AvailabilitySerializer, ChatReportSerializer)
 from rest_framework.viewsets import ModelViewSet
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema
 
 @extend_schema(exclude=True)
@@ -208,4 +207,45 @@ def user_dashboard(request):
     return Response(dashboard_data, status=status.HTTP_200_OK)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticatedAndNotBanned])
+def chat_report(request):
+    """
+    Create a chat report for a teacher.
+    Expects a JSON body with 'teacher_id' and 'reason' fields.
+    """
+    try:
+        contact_request = ContactRequest.objects.select_related('teacher__user').get(
+            student=request.user,
+            status='accepted'
+        )
+        contact_request.teacher.user.banned = True
+        contact_request.teacher.user.save()
+    except ContactRequest.DoesNotExist:
+        return Response({"error": "Invalid contact request."}, status=status.HTTP_400_BAD_REQUEST)
 
+    serializer = ChatReportSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(reporter=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_appeal(request):
+    """
+    Create an appeal for a chat report.
+    Expects a JSON body with 'reason' field.
+    """
+    is_banned=request.user.banned
+    if not is_banned:
+        return Response({"error": "You are not banned and cannot appeal."}, status=status.HTTP_400_BAD_REQUEST)
+    is_existing_appeal=Appeal.objects.filter(appellant=request.user, status='pending').exists()
+    if is_existing_appeal:
+        return Response({"error": "You already have a pending appeal."}, status=status.HTTP_400_BAD_REQUEST)
+    serializer = AppealSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(appellant=request.user, status='pending')
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

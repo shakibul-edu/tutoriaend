@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import (CustomUser, AcademicProfile, TeacherProfile, 
+from .models import (Appeal, CustomUser, AcademicProfile, TeacherProfile, 
                      Subject, Medium, Availability,
                      Qualification,Grade, JobPost, BidJob, JobPostAvailability,
-                     ContactRequest)
+                     ContactRequest, ChatReport)
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
@@ -51,6 +51,8 @@ class JobPostAdmin(admin.ModelAdmin):
 
 admin.site.register(JobPost, JobPostAdmin)
 admin.site.register(BidJob)
+admin.site.register(ChatReport)
+admin.site.register(Appeal)
 
 
 

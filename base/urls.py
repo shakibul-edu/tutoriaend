@@ -30,5 +30,7 @@ urlpatterns = [
     path('filter-teachers/', views.filter_teachers, name='filter_teachers'),
     path('review-by-teacher/<int:pk>/', views.review_by_tutorId, name='get_reviews_by_teacher'),
     path('user/dashboard/', views.user_dashboard, name='user_dashboard'),
+    path('block-report/', views.chat_report, name='block_report'),
+    path('appeal/', views.create_appeal, name='create_appeal'),
 ]
 urlpatterns += router.urls
