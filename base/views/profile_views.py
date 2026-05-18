@@ -187,16 +187,47 @@ def filter_teachers(request):
     Filters: min_salary, max_salary, gender, grade, distance (optional).
     """
     # Use select_related and prefetch_related to optimize queries and avoid missing relations
-    queryset = TeacherProfile.objects.select_related('user').prefetch_related('grade_list', 'medium_list').all()
+    from django.db.models import Q
+    queryset = TeacherProfile.objects.select_related('user').prefetch_related('grade_list', 'medium_list', 'subject_list').all()
 
     # serializers = TeacherProfileSerializer(queryset, many=True)
     # return Response(serializers.data, status=status.HTTP_200_OK)
 
-    max_salary = request.GET.get('feeRange')
+    # Get single-value filters
+    tutor_id = request.GET.get('id')
+    min_salary = request.GET.get('min_salary')
+    max_salary = request.GET.get('feeRange') or request.GET.get('max_salary')
     gender = request.GET.get('gender')
-    grade = request.GET.get('grade')
-    distance = request.GET.get('distance')
+    distance = request.GET.get('distance') or request.GET.get('preferred_distance')
     tuition_type = request.GET.get('tuitionType')
+    
+    # Get multi-value filters (as lists)
+    medium_list_ids = request.GET.getlist('medium_list')
+    grade_list_ids = request.GET.getlist('grade_list')
+    subject_list_ids = request.GET.getlist('subject_list')
+    
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Apply minimum salary filter (teacher's min_salary should be <= requested budget)
+
+    if tutor_id:
+        try:
+            queryset = queryset.filter(id=int(tutor_id))
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid tutor_id value: {tutor_id}")
+    if min_salary:
+        try:
+            queryset = queryset.filter(min_salary__lte=int(min_salary))
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid min_salary value: {min_salary}")
+    
+    # Apply maximum salary filter
+    if max_salary:
+        try:
+            queryset = queryset.filter(min_salary__lte=int(max_salary))
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid max_salary value: {max_salary}")
     
     # Only apply distance filter if user has a valid location (not None)
     if distance and hasattr(request.user, 'location') and request.user.location is not None:
@@ -205,23 +236,46 @@ def filter_teachers(request):
             queryset = queryset.filter(user__location__distance_lte=(user_location, D(km=float(distance))))
         except Exception as e:
             # Log the error but don't fail the entire request
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"Distance filter failed: {e}")
 
-    if max_salary:
-        queryset = queryset.filter(min_salary__lte=max_salary)
+    # Apply gender filter
     if gender and gender in ['male', 'female']:
         queryset = queryset.filter(gender__iexact=gender)
-    if grade:
-        queryset = queryset.filter(grades__id=grade)
+    
+    # Apply tuition type filter
     if tuition_type and tuition_type in ['online', 'offline']:
         queryset = queryset.filter(teaching_mode__iexact=tuition_type)
+    
+    # Apply medium_list filter (teachers with any of the specified media)
+    if medium_list_ids:
+        try:
+            medium_ids = [int(mid) for mid in medium_list_ids if mid]
+            if medium_ids:
+                queryset = queryset.filter(medium_list__id__in=medium_ids).distinct()
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid medium_list values: {medium_list_ids}")
+    
+    # Apply grade_list filter (teachers with any of the specified grades)
+    if grade_list_ids:
+        try:
+            grade_ids = [int(gid) for gid in grade_list_ids if gid]
+            if grade_ids:
+                queryset = queryset.filter(grade_list__id__in=grade_ids).distinct()
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid grade_list values: {grade_list_ids}")
+    
+    # Apply subject_list filter (teachers with any of the specified subjects)
+    if subject_list_ids:
+        try:
+            subject_ids = [int(sid) for sid in subject_list_ids if sid]
+            if subject_ids:
+                queryset = queryset.filter(subject_list__id__in=subject_ids).distinct()
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid subject_list values: {subject_list_ids}")
 
+    
     # Only return overview fields
     data = []
-    import logging
-    logger = logging.getLogger(__name__)
     
     for teacher in queryset:
         try:
