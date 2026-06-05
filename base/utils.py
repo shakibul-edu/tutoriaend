@@ -186,7 +186,7 @@ def get_availability_grouped_by_time(teacher:TeacherProfile):
                 "end_time": slot.end_time,
                 "days": []
             }
-        grouped[time_key]["days"].append(slot.day_of_week)
+        grouped[time_key]["days"].append(slot.days_of_week)
     
     result = list(grouped.values())
     return result

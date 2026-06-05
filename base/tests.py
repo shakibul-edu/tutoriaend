@@ -14,11 +14,13 @@ class FindAvailableTutorsTestCase(TestCase):
         Set up test data (tutors and their availabilities) before each test method.
         """
         User = get_user_model()
+        from django.contrib.gis.geos import Point
+        dummy_location = Point(90.4125, 23.8103)
         # Create User instances
-        user1 = User.objects.create_user(username="junaid", email="junaid@gmail.com")
-        user2 = User.objects.create_user(username="tarikul", email="tarikul@gmail.com")
-        user3 = User.objects.create_user(username="tasmin", email="tasmin@gmail.com")
-        user4 = User.objects.create_user(username="243000522e", email="243000522e@gmail.com")
+        user1 = User.objects.create_user(username="junaid", email="junaid@gmail.com", location=dummy_location)
+        user2 = User.objects.create_user(username="tarikul", email="tarikul@gmail.com", location=dummy_location)
+        user3 = User.objects.create_user(username="tasmin", email="tasmin@gmail.com", location=dummy_location)
+        user4 = User.objects.create_user(username="243000522e", email="243000522e@gmail.com", location=dummy_location)
 
         # Create TeacherProfile instances
         self.tutor1 = TeacherProfile.objects.create(user=user1)
@@ -27,27 +29,27 @@ class FindAvailableTutorsTestCase(TestCase):
         self.tutor4 = TeacherProfile.objects.create(user=user4)
 
         # Create Availability instances for Tutor 1 (Alice)
-        Availability.objects.create(tutor=self.tutor1, day_of_week='MON',
+        Availability.objects.create(tutor=self.tutor1, days_of_week='MON',
                                    start_time=time(9, 0), end_time=time(12, 0))
-        Availability.objects.create(tutor=self.tutor1, day_of_week='MON',
+        Availability.objects.create(tutor=self.tutor1, days_of_week='MON',
                                    start_time=time(14, 0), end_time=time(17, 0))
-        Availability.objects.create(tutor=self.tutor1, day_of_week='TUE',
+        Availability.objects.create(tutor=self.tutor1, days_of_week='TUE',
                                    start_time=time(10, 0), end_time=time(13, 0))
 
         # Create Availability instances for Tutor 2 (Bob)
-        Availability.objects.create(tutor=self.tutor2, day_of_week='MON',
+        Availability.objects.create(tutor=self.tutor2, days_of_week='MON',
                                    start_time=time(10, 0), end_time=time(13, 0))
-        Availability.objects.create(tutor=self.tutor2, day_of_week='WED',
+        Availability.objects.create(tutor=self.tutor2, days_of_week='WED',
                                    start_time=time(9, 0), end_time=time(12, 0))
 
         # Create Availability instances for Tutor 3 (Charlie)
-        Availability.objects.create(tutor=self.tutor3, day_of_week='MON',
+        Availability.objects.create(tutor=self.tutor3, days_of_week='MON',
                                    start_time=time(9, 30), end_time=time(11, 30))
-        Availability.objects.create(tutor=self.tutor3, day_of_week='MON',
+        Availability.objects.create(tutor=self.tutor3, days_of_week='MON',
                                    start_time=time(15, 0), end_time=time(16, 0))
 
         # Create Availability instances for Tutor 4 (Diana) - No Monday availability
-        Availability.objects.create(tutor=self.tutor4, day_of_week='TUE',
+        Availability.objects.create(tutor=self.tutor4, days_of_week='TUE',
                                    start_time=time(9, 0), end_time=time(17, 0))
 
 

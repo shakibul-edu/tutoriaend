@@ -37,6 +37,9 @@ urlpatterns = [
     path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include('rest_framework.urls')),  # Include DRF's authentication URLs
 
+    # SEO sitemap data endpoints — public, no auth required
+    path('api/seo/', include('seo.urls', namespace='seo')),
+
     # Raw OpenAPI schema
     path("api-docs/schema/", SpectacularAPIView.as_view(), name="schema"),
 
@@ -47,6 +50,7 @@ urlpatterns = [
     path("api-docs/docs/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     
 ]
+
 
 # This is the crucial part for serving media files in development
 if settings.DEBUG:

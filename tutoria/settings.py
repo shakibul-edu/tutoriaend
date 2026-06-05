@@ -58,7 +58,9 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "drf_spectacular_sidecar",
     "base",
+    "seo",
 ]
+
 
 # --------------------------------------------------
 # MIDDLEWARE
@@ -208,3 +210,36 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@etuition.app")
+
+# --------------------------------------------------
+# CACHE  (used by SEO endpoints)
+# --------------------------------------------------
+# In production: set REDIS_URL in your environment (e.g. Heroku Redis add-on).
+# In development / CI: falls back to LocMemCache (in-process, no setup needed).
+#
+# To use Redis, also install: pip install django-redis
+#
+_REDIS_URL = os.environ.get("REDIS_URL")
+
+if _REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": _REDIS_URL,
+            "KEY_PREFIX": "tutoria",
+            "TIMEOUT": 3600,
+            "OPTIONS": {
+                # Gracefully ignore cache failures rather than raising exceptions
+                "socket_connect_timeout": 5,
+                "socket_timeout": 5,
+            },
+        }
+    }
+else:
+    # LocMemCache — safe for development, does NOT share between processes
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "tutoria-seo",
+        }
+    }

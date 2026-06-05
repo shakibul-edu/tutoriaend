@@ -3,12 +3,27 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.contrib.gis.db import models as geomodels
+from django.utils.text import slugify
 import uuid
 
 class CustomUser(AbstractUser):
     is_teacher = models.BooleanField(default=False)
     location = geomodels.PointField(null=True, blank=True,geography=True, help_text="The geographical location of the user.")
     banned = models.BooleanField(default=False, help_text="Indicates if the user is banned from the platform.")
+    location_slug = models.SlugField(
+        blank=True,
+        db_index=True,
+        help_text="Human-readable slug of the tutor's area (populated by an admin command or on profile save). Used by /api/seo/locations/ without reverse-geocoding at runtime.",
+        max_length=120,
+        null=True,
+    )
+    location_name = models.CharField(
+        blank=True,
+        db_index=True,
+        help_text="Human-readable location name paired with location_slug.",
+        max_length=120,
+        null=True,
+    )
 
 def certificate_upload_to(instance, filename):
     return f"certificates/{instance.teacher.user.username}/{instance.degree if type(instance)==AcademicProfile else instance.skill}/{filename}"
@@ -129,6 +144,18 @@ class   TeacherProfile(models.Model):
     teaching_mode = models.CharField(max_length=20, choices=TEACHING_CHOICES, blank=True)
     preferred_distance = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Preferred distance for teaching in kilometers")
     profile_picture = models.ImageField(upload_to=profile_picture_upload_to, blank=True, null=True, help_text="Profile picture of the teacher.")
+    slug = models.SlugField(
+        blank=True,
+        db_index=True,
+        help_text="URL-friendly identifier generated from the teacher's full name + pk. Used by Next.js dynamic routes and the SEO sitemap.",
+        max_length=160,
+        unique=True,
+        null=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Timestamp of the last profile update. Used by the sitemap to signal freshness to crawlers.",
+    )
 
 
     def __str__(self):
@@ -144,6 +171,21 @@ class   TeacherProfile(models.Model):
     def save(self, *args, **kwargs):
         # Always enforce model-level validation for API and non-form saves.
         self.full_clean()
+
+        # Auto-generate slug on first save (creation only).
+        # We use full_name + pk to guarantee uniqueness without a DB lookup.
+        # Slug is never changed after creation to preserve stable URLs.
+        if not self.slug:
+            # pk is None before the first super().save(), so we save first
+            # then set the slug in a second atomic write.
+            super().save(*args, **kwargs)
+            full_name = (self.user.get_full_name() or self.user.username).strip()
+            base_slug = slugify(full_name) or 'tutor'
+            self.slug = f'{base_slug}-{self.pk}'
+            # Use update_fields to avoid triggering full_clean again
+            type(self).objects.filter(pk=self.pk).update(slug=self.slug)
+            return
+
         super().save(*args, **kwargs)
 
 
